@@ -1,0 +1,3 @@
+name: insurance-tools
+tools:
+  - type: code_interpreter

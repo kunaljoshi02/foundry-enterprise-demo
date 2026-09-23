@@ -1,0 +1,22 @@
+# Secrets / credentials — never commit
+*.env
+.env
+!.env.example
+*-deploy.json
+sp-*.json
+*password*.txt
+*.pem
+*.key
+
+# azd
+.azure/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db

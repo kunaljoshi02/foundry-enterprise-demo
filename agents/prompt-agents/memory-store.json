@@ -1,0 +1,28 @@
+{
+  "data": [
+    {
+      "object": "memory_store",
+      "id": "memstore_02fd2d0d40da3f21008PRmyfeqcSE7F6z5FX0uyp5zr2XdWyNb",
+      "created_at": 1790127968,
+      "updated_at": 1790127968,
+      "name": "insurance-memory",
+      "description": "Long-term memory for Contoso insurance demo agents.",
+      "metadata": {},
+      "definition": {
+        "kind": "default",
+        "chat_model": "gpt-4.1",
+        "embedding_model": "text-embedding-3-small",
+        "options": {
+          "user_profile_enabled": true,
+          "user_profile_details": "Policyholder communication preferences, preferred contact channel, language, prior claim history references. Avoid storing financial account numbers, medical detail or credentials.",
+          "chat_summary_enabled": true,
+          "default_ttl_seconds": 0
+        }
+      }
+    }
+  ],
+  "first_id": "memstore_02fd2d0d40da3f21008PRmyfeqcSE7F6z5FX0uyp5zr2XdWyNb",
+  "last_id": "memstore_02fd2d0d40da3f21008PRmyfeqcSE7F6z5FX0uyp5zr2XdWyNb",
+  "has_more": false,
+  "object": "list"
+}

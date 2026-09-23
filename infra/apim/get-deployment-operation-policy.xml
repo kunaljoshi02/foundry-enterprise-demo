@@ -1,0 +1,21 @@
+<policies>
+	<inbound>
+		<base />
+		<return-response>
+			<set-status code="200" reason="OK" />
+			<set-header name="Content-Type" exists-action="override">
+				<value>application/json</value>
+			</set-header>
+			<set-body>{"id":"/subscriptions/b55aa044-0dd2-46bf-9ef5-31d5c3dee20c/resourceGroups/rg-foundry-demo/providers/Microsoft.CognitiveServices/accounts/aifoundrydemo3zbz/deployments/gpt-4.1","name":"gpt-4.1","type":"Microsoft.CognitiveServices/accounts/deployments","sku":{"name":"GlobalStandard","capacity":50},"properties":{"model":{"format":"OpenAI","name":"gpt-4.1","version":"2025-04-14"},"provisioningState":"Succeeded","capabilities":{"chatCompletion":"true","responses":"true"},"raiPolicyName":"Microsoft.DefaultV2"}}</set-body>
+		</return-response>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>
