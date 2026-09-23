@@ -755,3 +755,57 @@ FOUNDRY_PROJECT_ENDPOINT       AZURE_OPENAI_ENDPOINT
 2. **APIM itself is currently publicly reachable.** That is the deliberate ingress point; call it out rather than letting the customer find it.
 3. **Memory, `memory_search_preview` and the A2A toolbox tool are previews.** The `a2a_preview` async-polling gap (Appendix B) is a live example — show the `blocking: true` workaround as the production pattern.
 4. **Shared private DNS zones now serve three VNets.** Links are additive with no record collisions, but the platform team should be told.
+
+---
+
+## Appendix F — Observability: making traces and metrics actually work
+
+> Full detail, KQL, and field gotchas: **[`observability-runbook.md`](./observability-runbook.md)**
+
+Wiring telemetry on a VNet-injected Foundry deployment took four independent fixes.
+Any one of them missing leaves App Insights completely empty:
+
+1. **Hosted agents have no OTel wiring by default.** Scaffolded agents ship with no
+   `APPLICATIONINSIGHTS_CONNECTION_STRING` and no instrumentation code. Add the env var
+   plus `azure-monitor-opentelemetry` and `opentelemetry-instrumentation-httpx`
+   (`scripts/patch_obs.py`). The **httpx** instrumentation is what makes the A2A hop
+   appear as a dependency span — without it the multi-agent story is invisible.
+2. **Set `OTEL_SERVICE_NAME` per agent.** Otherwise every span is
+   `cloud_RoleName=unknown_service` and the Application Map collapses into one node.
+3. **Grant `Monitoring Metrics Publisher` to the agent *instance* identities.** Blueprint
+   identities cannot hold role assignments (`PrincipalTypeNotSupported`).
+4. **App Insights `publicNetworkAccessForIngestion` must permit the runtime.** This was
+   the real blocker, and it surfaces as a misleading `Forbidden` from the OTel exporter
+   that looks exactly like an RBAC failure.
+
+### The AMPLS decision — state this explicitly
+
+For the demo we set `publicNetworkAccessForIngestion: Enabled` on `appi-tracing-3zbz`.
+That is a **shortcut**. The production golden path is an **Azure Monitor Private Link
+Scope**: AMPLS + private endpoint + private DNS zones for `privatelink.monitor.azure.com`,
+`privatelink.oms.opinsights.azure.com`, `privatelink.ods.opinsights.azure.com` and
+`privatelink.agentsvc.azure-automation.net`. Say this out loud — a regulated customer will
+ask, and "we opened it for the demo, here is how you'd close it" is a far stronger answer
+than being caught out.
+
+### FinOps: token metrics are a separate policy
+
+`llm-token-limit` enforces quota but **emits nothing**. Add `llm-emit-token-metric` to the
+APIM policy for per-workload token attribution. Metrics land in the **APIM-attached**
+App Insights (`appi-ailz-kj`), not the Foundry one.
+
+### Four routing gotchas that cost real time
+
+| Gotcha | Consequence |
+|---|---|
+| Prompt agents use `/openai/v1/responses` and **reject** `api-version`; hosted agents use `/agents/{name}/endpoint/protocols/openai/responses` and **require** `?api-version=v1` | Wrong endpoint → `400` with unhelpful text |
+| Prompt-agent body needs `"type": "agent_reference"` | Bare `400 Bad Request`, no explanation |
+| Routing follows `@latest`, not `default_version` — `PATCH default_version` returns `200` and does nothing | Must post a **new version** to change behaviour |
+| Memory is unsupported on BYOM/APIM-routed models | `policy-coverage-advisor` can never carry memory; only `underwriting-risk-summarizer` does |
+
+### Demo data
+
+`scripts/seed_rerun.py` produces the full narrative (memory capture → advisor → FNOL
+claims exercising toolbox + A2A → cross-conversation recall). Latest run **ok=12, fail=2**
+(transient 500s on two memory retries; those personas were already captured). Transcript:
+[`demo-seed-transcript.md`](./demo-seed-transcript.md).

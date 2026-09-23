@@ -8,6 +8,40 @@ from agent_framework_foundry_hosting import ResponsesHostServer
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
+# --- Observability: export OpenTelemetry traces/metrics to Application Insights ---
+_APPINSIGHTS_CS = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
+if _APPINSIGHTS_CS:
+    os.environ.setdefault("ENABLE_OTEL", "true")
+    os.environ.setdefault("ENABLE_SENSITIVE_DATA", "true")
+    _obs_ready = False
+    try:
+        from agent_framework.observability import setup_observability
+
+        try:
+            setup_observability(applicationinsights_connection_string=_APPINSIGHTS_CS)
+        except TypeError:
+            setup_observability()
+        _obs_ready = True
+    except Exception as _obs_exc:  # noqa: BLE001
+        print("setup_observability unavailable: %s" % _obs_exc, flush=True)
+    if not _obs_ready:
+        try:
+            from azure.monitor.opentelemetry import configure_azure_monitor
+
+            configure_azure_monitor(connection_string=_APPINSIGHTS_CS)
+            _obs_ready = True
+        except Exception as _mon_exc:  # noqa: BLE001
+            print("configure_azure_monitor failed: %s" % _mon_exc, flush=True)
+    if _obs_ready:
+        try:
+            from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
+            HTTPXClientInstrumentor().instrument()
+        except Exception as _httpx_exc:  # noqa: BLE001
+            print("httpx instrumentation failed: %s" % _httpx_exc, flush=True)
+        print("Application Insights telemetry enabled.", flush=True)
+
+
 load_dotenv()
 
 INSTRUCTIONS = """You are the Coverage & Settlement Adjudicator for Contoso Insurance.

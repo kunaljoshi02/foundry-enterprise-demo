@@ -3,6 +3,10 @@
 A **deployed and validated** reference build of Microsoft Foundry Agent Service with full VNet injection, fronted by an existing Azure API Management instance, demonstrating a multi-agent insurance solution.
 
 > 📘 **Start here:** [`docs/foundry-enterprise-demo-plan.md`](docs/foundry-enterprise-demo-plan.md) — the full deployment plan, architecture, golden paths, demo runbook and as-built appendices.
+>
+> 🔭 **Observability & field gotchas:** [`docs/observability-runbook.md`](docs/observability-runbook.md) — why App Insights stays empty, the AMPLS decision, APIM token metrics, endpoint/versioning traps.
+>
+> 🧪 **Seed the demo data:** [`scripts/seed_rerun.py`](scripts/seed_rerun.py) → transcript in [`docs/demo-seed-transcript.md`](docs/demo-seed-transcript.md).
 
 ---
 

@@ -13,6 +13,8 @@ services:
         uses:
             - ai-project
         env:
+            APPLICATIONINSIGHTS_CONNECTION_STRING: ${APPLICATIONINSIGHTS_CONNECTION_STRING}
+            OTEL_SERVICE_NAME: claims-intake-triage-agent
             AZURE_AI_MODEL_DEPLOYMENT_NAME: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}
             TOOLBOX_ENDPOINT: ${TOOLBOX_ENDPOINT}
             ADJUDICATOR_A2A_URL: ${ADJUDICATOR_A2A_URL}

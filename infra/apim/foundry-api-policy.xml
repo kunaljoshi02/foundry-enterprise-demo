@@ -1,14 +1,20 @@
 <policies>
-  <inbound>
-    <base />
-    <validate-azure-ad-token tenant-id="48640a7a-0e09-4f2d-87c1-d483b3c9519d" header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized. A valid Entra ID token is required.">
-      <audiences>
-        <audience>https://cognitiveservices.azure.com</audience>
-      </audiences>
-    </validate-azure-ad-token>
-    <llm-token-limit counter-key="@(context.Request.Headers.GetValueOrDefault(&quot;x-user-id&quot;,&quot;anonymous&quot;))" tokens-per-minute="20000" estimate-prompt-tokens="false" tokens-consumed-header-name="x-tokens-consumed" remaining-tokens-header-name="x-tokens-remaining" />
-    <set-backend-service base-url="https://aifoundrydemo3zbz.services.ai.azure.com" />
-    <rewrite-uri template="@{
+	<inbound>
+		<base />
+		<validate-azure-ad-token tenant-id="48640a7a-0e09-4f2d-87c1-d483b3c9519d" header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized. A valid Entra ID token is required.">
+			<audiences>
+				<audience>https://cognitiveservices.azure.com</audience>
+			</audiences>
+		</validate-azure-ad-token>
+		<llm-token-limit counter-key="@(context.Request.Headers.GetValueOrDefault(&quot;x-user-id&quot;,&quot;anonymous&quot;))" tokens-per-minute="20000" estimate-prompt-tokens="false" tokens-consumed-header-name="x-tokens-consumed" remaining-tokens-header-name="x-tokens-remaining" />
+		<llm-emit-token-metric namespace="genai">
+			<dimension name="API" value="@(context.Api.Name)" />
+			<dimension name="Operation" value="@(context.Operation.Name)" />
+			<dimension name="User" value="@(context.Request.Headers.GetValueOrDefault("x-user-id","anonymous"))" />
+			<dimension name="Workload" value="foundry-insurance-demo" />
+		</llm-emit-token-metric>
+		<set-backend-service base-url="https://aifoundrydemo3zbz.services.ai.azure.com" />
+		<rewrite-uri template="@{
         var p = context.Request.Url.Path;
         var marker = &quot;/foundry&quot;;
         var idx = p.IndexOf(marker, System.StringComparison.OrdinalIgnoreCase);
@@ -17,15 +23,21 @@
         if (!rest.StartsWith(&quot;/openai&quot;, System.StringComparison.OrdinalIgnoreCase)) { rest = &quot;/openai&quot; + rest; }
         return rest;
     }" copy-unmatched-params="true" />
-    <authentication-managed-identity resource="https://cognitiveservices.azure.com" output-token-variable-name="msi-token" ignore-error="false" />
-    <set-header name="Authorization" exists-action="override">
-      <value>@("Bearer " + (string)context.Variables["msi-token"])</value>
-    </set-header>
-  </inbound>
-  <backend><base /></backend>
-  <outbound>
-    <base />
-    <set-header name="x-foundry-gateway" exists-action="override"><value>apim-ailz-kj</value></set-header>
-  </outbound>
-  <on-error><base /></on-error>
+		<authentication-managed-identity resource="https://cognitiveservices.azure.com" output-token-variable-name="msi-token" ignore-error="false" />
+		<set-header name="Authorization" exists-action="override">
+			<value>@("Bearer " + (string)context.Variables["msi-token"])</value>
+		</set-header>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+		<set-header name="x-foundry-gateway" exists-action="override">
+			<value>apim-ailz-kj</value>
+		</set-header>
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
 </policies>

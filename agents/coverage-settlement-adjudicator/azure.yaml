@@ -13,6 +13,8 @@ services:
         uses:
             - ai-project
         env:
+            APPLICATIONINSIGHTS_CONNECTION_STRING: ${APPLICATIONINSIGHTS_CONNECTION_STRING}
+            OTEL_SERVICE_NAME: coverage-settlement-adjudicator
             AZURE_AI_MODEL_DEPLOYMENT_NAME: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}
         codeConfiguration:
             dependencyResolution: remote_build
