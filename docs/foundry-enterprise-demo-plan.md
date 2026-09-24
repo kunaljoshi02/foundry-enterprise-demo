@@ -65,12 +65,12 @@ Everything below exists in the subscription today and has been smoke-tested.
 
 | # | Agent | Kind | Model | Purpose | Status |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `claims-intake-triage-agent` | Hosted (Agent Framework, Python) | `gpt-4.1` | **Orchestrator.** Search + Skills + Code Interpreter + typed A2A delegation. | v8 ✅ |
+| 1 | `claims-intake-triage-agent` | Hosted (Agent Framework, Python) | `gpt-4.1` | **Orchestrator.** Search + Skills + Code Interpreter + hosted-agent delegation with explicit A2A error handling. | v9 ✅ |
 | 2 | `coverage-settlement-adjudicator` | Hosted (Agent Framework, Python) | `gpt-4.1` | **Specialist.** Search + Skills + Code Interpreter; exposes `responses` and `a2a`. | v6 ✅ |
 | 3 | `policy-coverage-advisor` | Prompt | `ai-gateway/gpt-4.1` (**via APIM**) | Semantic Search-grounded coverage Q&A with clause citation. | v10 ✅ |
 | 4 | `underwriting-risk-summarizer` | Prompt | `gpt-4.1` (direct) | Memory + OBO MCP + Web Search + Code Interpreter. OBO needs an interactive user. | v3 ⚠️ |
 
-**Multi-agent flow (proven end-to-end):** FNOL → `claims-intake-triage-agent` → `adjudicate_claim` function tool → A2A JSON-RPC `message/send` (`blocking: true`) → `coverage-settlement-adjudicator` → adjudication returned and surfaced in the triage response.
+**Multi-agent flow (proven end-to-end):** FNOL → `claims-intake-triage-agent` → `adjudicate_claim` function tool → A2A capability probe → hosted Responses fallback when Foundry returns `HostedAgentNotSupported` → `coverage-settlement-adjudicator` → adjudication surfaced in the triage response.
 
 **Instance identities:** triage `d14d6f47-034e-4b74-b154-8e01a5eac3dc`, adjudicator `e6d0a891-2ea7-4831-b434-69410133c4c4`. Both hold **Foundry User** for toolbox resources and **Search Index Data Reader**; triage also holds **Foundry Agent Consumer** for the A2A hop.
 
@@ -82,7 +82,7 @@ Everything below exists in the subscription today and has been smoke-tested.
 | OBO toolbox | `underwriting-obo-tools` | Isolates the user-token source so an unavailable entitlement or missing user token cannot break claims tools |
 | Search index | `contoso-policy-wordings` | 36 synthetic Home, Motor and Liability clauses; semantic configuration plus 1,536-dimensional vectors |
 | Skills | `claims-tone`, `regulatory-disclosure`, `adjudication-rationale`, `underwriting-appetite`, `customer-comms-tone` | Real v1/default Foundry Skills exposed as `skill://.../SKILL.md` resources |
-| A2A | typed `adjudicate_claim` hosted-agent function | Direct blocking JSON-RPC; intentionally not in the toolbox because the preview toolbox adapter does not reliably poll tasks |
+| Agent delegation | typed `adjudicate_claim` hosted-agent function | Checks the JSON-RPC envelope, then uses the hosted Responses endpoint because the current service supports prompt agents—not hosted agents—as native A2A targets |
 | OBO connection | `underwriter-obo-profile` | `UserEntraToken` against Agent 365 Me MCP. Provisioned; application-identity invocation is rejected by design |
 | Memory store | `insurance-memory` | Chat model `gpt-4.1`, embedding `text-embedding-3-small`, `chat_summary_enabled` + `user_profile_enabled` |
 | Memory consumer | `underwriting-risk-summarizer` v2 via `memory_search_preview`, scope `{{$userId}}` | Verified: preferences stated in conversation 1 were honoured in a **brand-new conversation** for the same user |
@@ -521,7 +521,7 @@ Adapted from the official `golden-path` reference in `foundry-samples`. Both pat
 
 ### 9.1 Hosted agents — multi-agent claims solution
 
-Two containerised hosted agents, deployed to the private ACR and run in the agent subnet. They form an **orchestrator + specialist** pattern communicating over **A2A behind the VNet** (supported by template 19).
+Two hosted agents run in the agent subnet and form an **orchestrator + specialist** pattern. The current Foundry service rejects a hosted agent as a native A2A target, so the orchestrator detects that JSON-RPC error and delegates through the specialist's private hosted Responses endpoint. A prompt-agent specialist is the golden path when native A2A itself is the capability being demonstrated.
 
 ```
    Claimant / adjuster (via jump host or channel)
@@ -536,7 +536,7 @@ Two containerised hosted agents, deployed to the private ACR and run in the agen
    │  • severity + complexity scoring  │
    │  • routing decision               │
    └──────────────┬────────────────────┘
-                  │  A2A (private, mcp-subnet)
+                  │  hosted Responses (private)
                   ▼
    ┌───────────────────────────────────┐
    │ AGENT 2 — Coverage & Settlement   │
@@ -557,10 +557,10 @@ Two containerised hosted agents, deployed to the private ACR and run in the agen
 | --- | --- |
 | Role | Entry point; owns the conversation and the FNOL record |
 | Model | `gpt-4.1` direct Foundry deployment |
-| Tools | `insurance-tools`: **Azure AI Search**, **Code Interpreter**, **Web Search**; typed `adjudicate_claim` A2A function; `load_insurance_skill` resource loader |
+| Tools | `insurance-tools`: **Azure AI Search**, **Code Interpreter**, **Web Search**; typed `adjudicate_claim` delegation function; `load_insurance_skill` resource loader |
 | Skills | `claims-tone` (empathetic, non-committal on liability), `regulatory-disclosure` |
 | Guardrails | PII redaction; prohibit statements admitting liability |
-| Demo moment | Submit a wet-floor FNOL → Skills + Search → A2A specialist → clause-grounded conditional settlement |
+| Demo moment | Submit a wet-floor FNOL → Skills + Search → hosted specialist → clause-grounded conditional settlement |
 
 #### Agent 2 — `coverage-settlement-adjudicator` (hosted)
 
@@ -721,19 +721,31 @@ These four appendices capture issues that cost real debugging time. Treat them a
 
 **Golden-path rule:** any gateway fronting Foundry as BYOM must implement the deployment-metadata probe, not just chat/completions.
 
-## Appendix B — A2A between Foundry agents
+## Appendix B — A2A target limitation and hosted-agent fallback
 
-Three things must all be true or the hop fails:
+An HTTP 200 from the A2A endpoint confirms only that the JSON-RPC request was transported. Always inspect the response body for an `error` member.
 
-1. **Agent card path.** Foundry serves the card at `{a2a_endpoint}/agentCard/v1.0` — **not** `/.well-known/agent-card.json`. A `remote-a2a` connection must set metadata `AgentCardPath=/agentCard/v1.0` (plus `ApiType=Azure`, `type=custom_A2A`) and `--audience https://ai.azure.com`. Without it: `NOT_FOUND – Failed to fetch agent card`. The connection `target` must have **no query string**.
-2. **RBAC.** The calling agent's *instance identity* needs **Foundry Agent Consumer** (`eed3b665-ab3a-47b6-8f48-c9382fb1dad6`) on the target — granted at both project and account scope here. Note `Azure AI User` does not exist as a role name in this tenant.
-3. **Agentic identity only resolves inside a published agent.** Running `tools/list` standalone as a service principal returns `AgenticIdentityToken … requires AgentInstanceClientId and AgentBlueprintClientId, or an ApplicationName`. **That error is expected**, not a misconfiguration — test from inside a deployed agent.
+The live hosted-to-hosted test returned:
 
-### The `blocking: true` pattern (important)
+```json
+{
+  "error": {
+    "code": -32099,
+    "data": {
+      "code": "HostedAgentNotSupported",
+      "detail": "Use a prompt agent as the A2A target."
+    }
+  }
+}
+```
 
-The preview `a2a_preview` toolbox tool does not poll asynchronous A2A tasks. Observed behaviour: `message/send` returns a task in `working` state, and a subsequent `tasks/get` reports the task does not exist — surfacing to the caller as a generic `Error: Function failed.`
+`claims-intake-triage-agent` v9 handles this explicitly. It first sends blocking `message/send`; when—and only when—the service returns `HostedAgentNotSupported`, it derives the adjudicator's private hosted Responses endpoint, invokes it with the same claim summary, and extracts the final assistant `output_text`. Other JSON-RPC errors are returned without fallback.
 
-**Adopted workaround, now the recommended pattern:** call the A2A JSON-RPC endpoint **directly from agent code** as a typed function tool, using `httpx` + `DefaultAzureCredential` (scope `https://ai.azure.com/.default`) and `"configuration": {"blocking": true}` in the `message/send` params. This returns the completed artifact synchronously and is what `claims-intake-triage-agent` v3 does.
+**Golden paths:**
+
+1. Use a **prompt agent** as the target when native Foundry A2A is the demo objective.
+2. Use the **hosted Responses protocol** for a hosted orchestrator calling a hosted specialist.
+3. Keep the JSON-RPC envelope check even when HTTP status is 200, and log protocol, response ID, and terminal status without logging claim content.
 
 ## Appendix C — Agent Memory
 

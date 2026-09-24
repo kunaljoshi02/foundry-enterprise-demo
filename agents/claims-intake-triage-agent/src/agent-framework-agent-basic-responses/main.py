@@ -12,6 +12,13 @@ from agent_framework_foundry_hosting import FoundryToolbox, ResponsesHostServer
 from azure.identity import DefaultAzureCredential
 from pydantic import Field
 
+from agent_protocols import (
+    extract_a2a_text,
+    extract_responses_text,
+    is_hosted_agent_a2a_unsupported,
+    responses_url_from_a2a_url,
+)
+
 # --- Observability: export OpenTelemetry traces/metrics to Application Insights ---
 _APPINSIGHTS_CS = os.environ.get("APPLICATIONINSIGHTS_CONNECTION_STRING")
 if _APPINSIGHTS_CS:
@@ -129,13 +136,54 @@ async def adjudicate_claim(
         return "Adjudicator call failed with HTTP " + str(resp.status_code) + ": " + resp.text[:500]
     data = resp.json()
     if "error" in data:
-        return "Adjudicator returned an error: " + str(data["error"])
-    texts = []
-    for artifact in data.get("result", {}).get("artifacts", []):
-        for part in artifact.get("parts", []):
-            if part.get("kind") == "text":
-                texts.append(part.get("text", ""))
-    return "\n".join(texts) if texts else "Adjudicator returned no content."
+        if not is_hosted_agent_a2a_unsupported(data["error"]):
+            return "Adjudicator returned an A2A error: " + json.dumps(data["error"])
+
+        responses_url = responses_url_from_a2a_url(ADJUDICATOR_A2A_URL)
+        print(
+            "A2A target rejected by Foundry; retrying hosted adjudicator over "
+            "the Responses protocol.",
+            flush=True,
+        )
+        async with httpx.AsyncClient(timeout=180.0) as http:
+            fallback = await http.post(
+                responses_url,
+                headers={
+                    "Authorization": "Bearer " + token,
+                    "Content-Type": "application/json",
+                },
+                json={"input": claim_summary},
+            )
+        if fallback.status_code >= 400:
+            return (
+                "Adjudicator Responses fallback failed with HTTP "
+                + str(fallback.status_code)
+                + ": "
+                + fallback.text[:500]
+            )
+        fallback_data = fallback.json()
+        text = extract_responses_text(fallback_data)
+        if text:
+            print(
+                "Adjudicator Responses fallback completed: response_id="
+                + str(fallback_data.get("id", "unknown"))
+                + ", status="
+                + str(fallback_data.get("status", "unknown")),
+                flush=True,
+            )
+            return text
+        return (
+            "Adjudicator Responses fallback returned no assistant text: status="
+            + str(fallback_data.get("status", "unknown"))
+        )
+
+    result = data.get("result")
+    text = extract_a2a_text(result)
+    if text:
+        return text
+
+    state = result.get("status", {}).get("state") if isinstance(result, dict) else None
+    return "Adjudicator A2A response contained no text: state=" + str(state or "unknown")
 
 
 INSTRUCTIONS = """You are the Claims Intake & Triage Orchestrator for a commercial and personal lines insurer.

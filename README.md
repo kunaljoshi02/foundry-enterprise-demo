@@ -63,14 +63,14 @@ scripts/
 
 | Agent | Kind | Model | Role |
 | --- | --- | --- | --- |
-| `claims-intake-triage-agent` | Hosted | `gpt-4.1` | Orchestrator — classifies FNOL, extracts entities, flags fraud, routes, delegates to the adjudicator over A2A |
+| `claims-intake-triage-agent` | Hosted | `gpt-4.1` | Orchestrator — classifies FNOL, extracts entities, flags fraud, routes, and delegates to the hosted adjudicator |
 | `coverage-settlement-adjudicator` | Hosted | `gpt-4.1` | Specialist — applies policy wording, computes settlement and excess |
 | `policy-coverage-advisor` | Prompt | `ai-gateway/gpt-4.1` (**via APIM**) | Grounded coverage Q&A with clause citation; proves the gateway path |
 | `underwriting-risk-summarizer` | Prompt | `gpt-4.1` (direct) | Memory + Web Search + Code Interpreter + user-context OBO MCP |
 
-**Proven flow:** FNOL → triage agent → `adjudicate_claim` function tool → A2A `message/send` with `blocking: true` → adjudicator → decision reported verbatim.
+**Proven flow:** FNOL → triage agent → `adjudicate_claim` function tool → A2A capability probe → hosted-agent Responses fallback → adjudicator → decision surfaced in the triage response.
 
-**Verified live:** the triage agent loaded `claims-tone` and `regulatory-disclosure`, queried `contoso-policy-wordings`, called the adjudicator over A2A, and returned its grounded decision. The adjudicator loaded Skills, queried Search, and used Code Interpreter. The APIM-routed advisor returned cited Search results. OBO is provisioned but can only be verified from an interactive user session; jump-host managed-identity calls correctly return `signed-in user required`.
+**Verified live:** the triage agent loaded `claims-tone` and `regulatory-disclosure`, queried `contoso-policy-wordings`, delegated to the hosted adjudicator, and returned its grounded decision. Foundry currently returns HTTP 200 with JSON-RPC error `HostedAgentNotSupported` when a hosted agent is used as an A2A target, so v9 detects that envelope and retries through the adjudicator's hosted Responses endpoint. The adjudicator loaded Skills, queried Search, and used Code Interpreter. The APIM-routed advisor returned cited Search results. OBO is provisioned but can only be verified from an interactive user session; jump-host managed-identity calls correctly return `signed-in user required`.
 
 ---
 
@@ -79,7 +79,7 @@ scripts/
 These cost real debugging time. Each is documented in full in the plan appendices.
 
 1. **APIM must implement the deployment-metadata probe** (Appendix A). Foundry validates a BYOM connection with `GET {target}/deployments/{model}` and **no `api-version`**. It must return an *ARM Cognitive Services deployment resource* shape, not an OpenAI-style object. Without it, every call fails with a bare `NotFound`.
-2. **A2A needs three things together** (Appendix B): connection metadata `AgentCardPath=/agentCard/v1.0` (the card is *not* at `/.well-known/agent-card.json`), the `Foundry Agent Consumer` role on the caller's instance identity, and `"configuration": {"blocking": true}` on `message/send` — the preview `a2a_preview` toolbox tool does not poll async tasks.
+2. **A2A HTTP 200 does not mean agent success** (Appendix B): inspect the JSON-RPC body. The current service rejects hosted-agent A2A targets with `HostedAgentNotSupported`; the orchestrator uses the hosted Responses protocol as a controlled fallback. Use a prompt agent when demonstrating native Foundry A2A.
 3. **Memory is REST-only and preview-gated** (Appendix C): `POST {project}/memory_stores?api-version=v1` (snake_case) with header `Foundry-Features: MemoryStores=V1Preview`. It is **not supported on BYOM model connections** — a real trade-off between routing everything through the gateway and full platform features.
 
 ---

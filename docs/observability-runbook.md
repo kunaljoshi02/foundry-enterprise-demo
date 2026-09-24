@@ -34,6 +34,8 @@ invoke_agent <id>                                  (triage, InProc)
 ├── tools/list                                          toolbox discovery
 ├── execute_tool adjudicate_claim                  (InProc)
 │   └── POST .../agents/coverage-settlement-adjudicator/endpoint/protocols/a2a
+│       └── JSON-RPC HostedAgentNotSupported
+│   └── POST .../agents/coverage-settlement-adjudicator/endpoint/protocols/openai/responses
 │       └── invoke_agent <id>                      (adjudicator, separate role)
 ├── chat gpt-4.1                                   (InProc)
 └── GET/PUT .../storage/state_stores/...           conversation persistence
