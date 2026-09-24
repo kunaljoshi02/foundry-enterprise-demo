@@ -1,0 +1,21 @@
+description: Enterprise insurance toolbox - policy grounding, skills, web and computation
+skills:
+  - name: claims-tone
+  - name: regulatory-disclosure
+  - name: adjudication-rationale
+  - name: underwriting-appetite
+  - name: customer-comms-tone
+tools:
+  - type: azure_ai_search
+    name: aifoundrydemo3zbzsearch
+    azure_ai_search:
+      indexes:
+        - project_connection_id: aifoundrydemo3zbzsearch
+          index_name: contoso-policy-wordings
+          query_type: semantic
+          top_k: 8
+  - type: code_interpreter
+    name: insurance-calculator
+    container: { type: auto }
+  - type: web_search
+    name: external-risk-search

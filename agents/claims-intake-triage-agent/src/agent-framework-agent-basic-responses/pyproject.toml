@@ -8,5 +8,7 @@ dependencies = [
     "opentelemetry-instrumentation-httpx",
     "agent-framework-foundry",
     "agent-framework-foundry-hosting>=1.0.0b260813",
+    "httpx",
+    "pydantic",
     "debugpy",
 ]

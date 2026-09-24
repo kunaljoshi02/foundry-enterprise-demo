@@ -3,7 +3,7 @@
 **Audience:** Customer-facing enterprise demo (insurance vertical)
 **Subscription:** `ME-MngEnvMCAP013979-joshikunal-1` (`b55aa044-0dd2-46bf-9ef5-31d5c3dee20c`)
 **Region:** Sweden Central (pinned by the existing APIM landing zone)
-**Status:** ✅ **DEPLOYED AND VALIDATED.** All infrastructure (Phases 0–6), 2 hosted agents, 2 prompt agents, a shared toolbox and an agent memory store are live. See **Section 1A — As-Built Inventory** and **Appendices A–D** for the as-built detail and the hard-won fixes.
+**Status:** ✅ **CORE SOLUTION DEPLOYED AND VALIDATED.** Infrastructure, 2 hosted agents, 2 prompt agents, Search grounding, five Skills, the shared toolbox, Memory, A2A, APIM and telemetry are live. OBO plumbing is deployed but requires an interactive signed-in user; evaluation/optimizer execution is intentionally pending user approval. See **Section 1A — As-Built Inventory** for the verified boundary.
 
 ---
 
@@ -65,26 +65,44 @@ Everything below exists in the subscription today and has been smoke-tested.
 
 | # | Agent | Kind | Model | Purpose | Status |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `claims-intake-triage-agent` | Hosted (Agent Framework, Python) | `gpt-4.1` | **Orchestrator.** Classifies FNOL, extracts entities, flags fraud indicators, routes, then calls agent 2 over A2A and reports its decision verbatim. | v3 ✅ |
-| 2 | `coverage-settlement-adjudicator` | Hosted (Agent Framework, Python) | `gpt-4.1` | **Specialist.** Applies policy wording, computes settlement/excess, returns an adjudication. Exposes `responses` **and `a2a`** protocols. | v1 ✅ |
-| 3 | `policy-coverage-advisor` | Prompt | `ai-gateway/gpt-4.1` (**via APIM**) | Grounded coverage Q&A with clause citation and fraud escalation. Proves the APIM gateway path end-to-end. | v1 ✅ |
-| 4 | `underwriting-risk-summarizer` | Prompt | `gpt-4.1` (direct) | Structured risk summary + REFER/DECLINE recommendation. **Carries the Memory tool.** | v2 ✅ |
+| 1 | `claims-intake-triage-agent` | Hosted (Agent Framework, Python) | `gpt-4.1` | **Orchestrator.** Search + Skills + Code Interpreter + typed A2A delegation. | v8 ✅ |
+| 2 | `coverage-settlement-adjudicator` | Hosted (Agent Framework, Python) | `gpt-4.1` | **Specialist.** Search + Skills + Code Interpreter; exposes `responses` and `a2a`. | v6 ✅ |
+| 3 | `policy-coverage-advisor` | Prompt | `ai-gateway/gpt-4.1` (**via APIM**) | Semantic Search-grounded coverage Q&A with clause citation. | v10 ✅ |
+| 4 | `underwriting-risk-summarizer` | Prompt | `gpt-4.1` (direct) | Memory + OBO MCP + Web Search + Code Interpreter. OBO needs an interactive user. | v3 ⚠️ |
 
 **Multi-agent flow (proven end-to-end):** FNOL → `claims-intake-triage-agent` → `adjudicate_claim` function tool → A2A JSON-RPC `message/send` (`blocking: true`) → `coverage-settlement-adjudicator` → adjudication returned and surfaced in the triage response.
 
-**Instance identities:** triage `d14d6f47-034e-4b74-b154-8e01a5eac3dc`, adjudicator `e6d0a891-2ea7-4831-b434-69410133c4c4`. The triage identity holds **Foundry Agent Consumer** at both project and account scope — required for the A2A hop.
+**Instance identities:** triage `d14d6f47-034e-4b74-b154-8e01a5eac3dc`, adjudicator `e6d0a891-2ea7-4831-b434-69410133c4c4`. Both hold **Foundry User** for toolbox resources and **Search Index Data Reader**; triage also holds **Foundry Agent Consumer** for the A2A hop.
 
 ### 1A.4 Toolbox, connections and memory
 
 | Asset | As-built | Notes |
 | --- | --- | --- |
-| Toolbox | `insurance-tools`, **default version 2** | Tools: `code_interpreter`. Endpoint `…/toolboxes/insurance-tools/versions/2/mcp?api-version=v1` |
-| Toolbox v1 | retained | Contains the `a2a_preview` tool that does **not** poll async A2A tasks — kept only to demo the failure mode |
-| Connection | `adjudicator-a2a` | RemoteA2A, `agentic-identity`, audience `https://ai.azure.com`, metadata `AgentCardPath=/agentCard/v1.0` |
+| Toolbox | `insurance-tools`, **default version 1** (recreated) | `aifoundrydemo3zbzsearch` (`semantic`, top 8), `external-risk-search`, `insurance-calculator`, and five Skill resources |
+| OBO toolbox | `underwriting-obo-tools` | Isolates the user-token source so an unavailable entitlement or missing user token cannot break claims tools |
+| Search index | `contoso-policy-wordings` | 36 synthetic Home, Motor and Liability clauses; semantic configuration plus 1,536-dimensional vectors |
+| Skills | `claims-tone`, `regulatory-disclosure`, `adjudication-rationale`, `underwriting-appetite`, `customer-comms-tone` | Real v1/default Foundry Skills exposed as `skill://.../SKILL.md` resources |
+| A2A | typed `adjudicate_claim` hosted-agent function | Direct blocking JSON-RPC; intentionally not in the toolbox because the preview toolbox adapter does not reliably poll tasks |
+| OBO connection | `underwriter-obo-profile` | `UserEntraToken` against Agent 365 Me MCP. Provisioned; application-identity invocation is rejected by design |
 | Memory store | `insurance-memory` | Chat model `gpt-4.1`, embedding `text-embedding-3-small`, `chat_summary_enabled` + `user_profile_enabled` |
 | Memory consumer | `underwriting-risk-summarizer` v2 via `memory_search_preview`, scope `{{$userId}}` | Verified: preferences stated in conversation 1 were honoured in a **brand-new conversation** for the same user |
 
 > ⚠️ **Memory is not supported on BYOM model connections.** Attaching `memory_search_preview` to `policy-coverage-advisor` (which routes via APIM) returns `The following tools are not supported with BYO model: memory_search`. Memory was therefore attached to the direct-model agent instead. Demo both facts — it is a real architectural trade-off between "everything through the gateway" and "full platform feature set".
+
+### 1A.5 Verified capability boundary
+
+| Capability | State | Evidence / boundary |
+| --- | --- | --- |
+| VNet injection, private endpoints, APIM peering | ✅ Verified | Foundry public access disabled; calls run from the Bastion-only jump host |
+| APIM/BYOM model governance | ✅ Verified | Advisor v10 uses `ai-gateway/gpt-4.1`; APIM emits token metrics |
+| Search / Foundry IQ grounding | ✅ Verified | `contoso-policy-wordings`; advisor and both hosted agents returned clause-grounded answers |
+| Toolbox | ✅ Verified | Live `tools/list`: Search, Web Search, Code Interpreter; live `resources/list`: five Skills |
+| Skills | ✅ Verified | Hosted traces include `load_insurance_skill`; returned current `SKILL.md` text |
+| Hosted A2A | ✅ Verified | Triage v8 → adjudicator v6 using blocking `message/send` |
+| Memory | ✅ Verified | Cross-conversation preference recall for the same `userId` |
+| OBO | ⚠️ User-context gated | Connection/toolbox/agent wiring exists. Managed-identity test returns `signed-in user required`; use the Foundry portal or an end-user-authenticated client |
+| Evaluations / Agent Optimizer | ⏳ Not run | Requires an explicit choice of suite source and approval before generating/running evaluation assets |
+| Fabric IQ, private custom MCP, File Search, Guardrails API, routines | ◻ Golden-path extensions | Documented architecture options, not deployed in this demo |
 
 ---
 
@@ -409,21 +427,21 @@ If either returns a public IP, the private DNS zone link is missing.
 | # | Pillar | How it is demonstrated | Where it lives |
 | --- | --- | --- | --- |
 | 1 | **Agent Service + VNet injection** | Agent Service compute injected into delegated `agent-subnet`; account `publicNetworkAccess=Disabled`; all deps behind PEs | Template 19 |
-| 2 | **Tools** | Azure AI Search, File Search, Code Interpreter, Function Calling, OpenAPI, Web Search, Bing Grounding | Prompt + hosted agents |
-| 3 | **Toolboxes** | One versioned, immutable toolbox (`insurance-tools`) shared by all four agents; `azd ai toolbox` CRUD; publish/rollback by version | `mcp-subnet` + toolbox service |
-| 4 | **MCP** | Private MCP server on ACA in `mcp-subnet` exposing policy-admin + claims-system operations; auth modes: `ProjectManagedIdentity`, `CustomKeys`, `UserEntraToken` | `mcp-subnet` |
+| 2 | **Tools** | Live: Azure AI Search, Code Interpreter, Web Search, typed function calls. File Search/OpenAPI are golden-path extensions | Prompt + hosted agents |
+| 3 | **Toolboxes** | `insurance-tools` shared by hosted agents; OBO isolated in `underwriting-obo-tools` to prevent one failing source poisoning all tools | Foundry toolbox service |
+| 4 | **MCP** | Live toolbox MCP endpoints plus Agent 365 `UserEntraToken`; private ACA custom MCP is a golden-path extension | Foundry toolboxes |
 | 5 | **Memory** | Managed long-term memory store; agent recalls policyholder preferences and prior claims across sessions. **Requires an embedding deployment** (`text-embedding-3-small`) | Project-owned storage |
-| 6 | **Foundry IQ** | Knowledge grounding over policy wordings/endorsements via AI Search; Fabric IQ for loss-history analytics; Work IQ for internal M365 context | AI Search + Fabric/Work IQ tools |
+| 6 | **Foundry IQ** | Live knowledge grounding over 36 policy clauses via AI Search; Fabric IQ/Work IQ remain optional golden-path extensions | Azure AI Search |
 | 7 | **Developer Experience** | `azd ai agent` scaffold → local run → deploy → invoke; VS Code on jump host; CI/CD pipeline; agent versioning | Jump host + `azd` |
 | 8 | **Identity** | Account + project system-assigned MI; agents run server-side as the project MI | Entra ID |
 | 9 | **Permissions** | Least-privilege RBAC: `Foundry User`, `Cognitive Services User`, `AcrPull`, Search/Cosmos data-plane roles | Azure RBAC |
 | 10 | **Auth** | Entra ID only, `disableLocalAuth`; token audience `https://ai.azure.com`; APIM `validate-azure-ad-token` | APIM + Foundry |
-| 11 | **OBO** | `UserEntraToken` MCP auth — the underwriting agent sees **only** what the signed-in underwriter may see. Strongest enterprise trust moment | MCP tool |
+| 11 | **OBO** | `UserEntraToken` MCP is wired to the underwriting agent. Requires an interactive end-user token; service identities are rejected by design | Isolated MCP toolbox |
 | 12 | **Observability** | App Insights tracing; `customEvents` correlation from eval result → exact response; latency/failure analysis; APIM token metrics | App Insights + APIM |
 | 13 | **Skills** | Reusable behavioral guidelines (`claims-tone`, `regulatory-disclosure`) attached to the toolbox, surfaced over MCP `resources/list` as `skill://` URIs, versioned independently of the toolbox | Toolbox `skills[]` |
-| 14 | **Evaluations & Optimization** | Eval suites + datasets harvested from production traces; regression detection; Agent Optimizer proposing improved instructions; version comparison | `eval.yaml` + `.foundry/` |
-| 15 | **Trust & Safety** | Guardrails API attached to agents; Content Safety; jailbreak/prompt-shield detection at APIM; groundedness evaluators | Guardrails + APIM |
-| 16 | **Manage & Operate** | Immutable agent versions, routines (scheduled/event-triggered runs), continuous production evaluation, insights & recommendations, cost control via APIM token limits | Foundry + APIM |
+| 14 | **Evaluations & Optimization** | Planned next step: generate an eval suite from instructions, traces, or `eval.yaml`, then run version comparison / Agent Optimizer after approval | Foundry evaluation workflow |
+| 15 | **Trust & Safety** | Live: strict grounding, human-review triggers, regulatory Skills and APIM JWT/token policy. Guardrails API is an extension | Agents + APIM |
+| 16 | **Manage & Operate** | Live: immutable versions, traces, metrics and APIM cost controls. Routines/continuous evaluation are extensions | Foundry + APIM |
 
 ---
 
@@ -490,10 +508,10 @@ Adapted from the official `golden-path` reference in `foundry-samples`. Both pat
 
 | # | Use case | Business value | Pillars exercised |
 | --- | --- | --- | --- |
-| UC-1 | **FNOL intake & triage** — capture first notice of loss conversationally, extract structured data from photos/PDFs, score severity | Cuts intake handling time; consistent data capture | Tools, Memory, Code Interpreter, File Search, Observability |
+| UC-1 | **FNOL intake & triage** — capture first notice of loss, extract facts, search policy wording, apply communication Skills and delegate over A2A | Cuts intake handling time; consistent data capture | Search, Skills, A2A, Observability |
 | UC-2 | **Coverage adjudication** — ground a coverage decision in the actual policy wording + endorsements, produce an auditable rationale | Reduces leakage and wrongful denials; regulator-defensible | Foundry IQ, AI Search, A2A, Guardrails, Evaluations |
-| UC-3 | **Policy & coverage advisory** — answer "am I covered for X?" grounded strictly in the customer's own policy | Deflects contact-centre volume; reduces mis-selling risk | Foundry IQ, Memory, Skills, Trust & Safety |
-| UC-4 | **Underwriting risk triage** — summarise a submission, blend loss history + external risk signals, recommend appetite | Faster quote turnaround; consistent appetite application | OBO, Fabric IQ, Web Search, Permissions |
+| UC-3 | **Policy & coverage advisory** — answer "am I covered for X?" grounded strictly in policy wording through APIM | Deflects contact-centre volume; reduces mis-selling risk | Foundry IQ, AI Search, APIM, Trust & Safety |
+| UC-4 | **Underwriting risk triage** — recall underwriter preferences, calculate loss ratio, research external risk, and check user identity before an authority-sensitive recommendation | Faster quote turnaround; consistent appetite application | Memory, OBO, Web Search, Code Interpreter |
 | UC-5 | **Fraud signal surfacing** — flag anomalous claim patterns for SIU referral | Loss-ratio improvement | MCP, Functions, Observability |
 | UC-6 | **Regulatory & audit evidence** — every decision traceable to prompt, tools, model version, policy clause | Audit and conduct-risk readiness | Observability, Evaluations, Manage & Operate |
 
@@ -538,20 +556,20 @@ Two containerised hosted agents, deployed to the private ACR and run in the agen
 | Aspect | Detail |
 | --- | --- |
 | Role | Entry point; owns the conversation and the FNOL record |
-| Model | `gpt-4.1` via APIM BYOM connection (`ai-gateway/gpt-4.1`) |
-| Tools | **Code Interpreter** (damage-estimate maths, photo EXIF), **File Search** (uploaded police reports/invoices), **MCP** → policy-admin system (`ProjectManagedIdentity`), **Function Calling** (severity scoring), **Memory** (policyholder history) |
+| Model | `gpt-4.1` direct Foundry deployment |
+| Tools | `insurance-tools`: **Azure AI Search**, **Code Interpreter**, **Web Search**; typed `adjudicate_claim` A2A function; `load_insurance_skill` resource loader |
 | Skills | `claims-tone` (empathetic, non-committal on liability), `regulatory-disclosure` |
 | Guardrails | PII redaction; prohibit statements admitting liability |
-| Demo moment | Upload a damage photo + policy number → structured FNOL emerges → agent explains *why* it routed to fast-track |
+| Demo moment | Submit a wet-floor FNOL → Skills + Search → A2A specialist → clause-grounded conditional settlement |
 
 #### Agent 2 — `coverage-settlement-adjudicator` (hosted)
 
 | Aspect | Detail |
 | --- | --- |
 | Role | Specialist invoked over A2A; never talks to the claimant directly |
-| Model | `gpt-4.1` (higher reasoning budget) via APIM |
-| Tools | **Azure AI Search** (policy wordings + endorsements, private PE), **MCP** → claims/fraud scoring API fronted by APIM, **OpenAPI** → payments service in `mcp-subnet`, **Code Interpreter** (settlement maths, depreciation) |
-| Skills | `adjudication-rationale` (mandatory clause citation format) |
+| Model | `gpt-4.1` direct Foundry deployment |
+| Tools | `insurance-tools`: **Azure AI Search**, **Code Interpreter**, **Web Search**; `load_insurance_skill` |
+| Skills | `adjudication-rationale`, `regulatory-disclosure`, `customer-comms-tone` |
 | Guardrails | Groundedness enforcement — no coverage claim without a cited clause |
 | Demo moment | Returns "Covered — £4,200, less £250 excess", citing **Section 3(b) Accidental Damage**, with the fraud check shown as clean |
 
@@ -567,8 +585,8 @@ Model + instructions + tools, no container. These deploy in seconds — ideal fo
 | --- | --- |
 | Purpose | UC-3 — answers "am I covered for X?" strictly from the customer's own policy |
 | Model | `ai-gateway/gpt-4.1` (BYOM via APIM) |
-| Tools | **Azure AI Search** (Foundry IQ grounding over policy wordings), **File Search**, **Memory** |
-| Skills | `customer-comms-tone`, `regulatory-disclosure` |
+| Tools | **Azure AI Search** (`semantic`, top 8) over `contoso-policy-wordings` |
+| Skills | Principles embedded in instructions; no toolbox binding on this APIM/BYOM prompt agent |
 | Guardrails | Must refuse to speculate; must cite the clause; content safety on |
 | Demo moment | Ask about a **deliberately uncovered** peril — the agent declines cleanly and cites the exclusion rather than hallucinating cover. This is the trust proof point. |
 
@@ -577,31 +595,38 @@ Model + instructions + tools, no container. These deploy in seconds — ideal fo
 | Aspect | Detail |
 | --- | --- |
 | Purpose | UC-4 — summarise a submission and recommend appetite |
-| Model | `ai-gateway/gpt-4.1` |
-| Tools | **MCP with `UserEntraToken` (OBO)** → underwriting data platform, **Fabric IQ** (loss history), **Web Search** (external property/geo risk), **Code Interpreter** (loss-ratio maths) |
-| Skills | `underwriting-appetite` |
-| Demo moment | **Run the same prompt as two different signed-in users.** A senior underwriter sees full loss history; a junior sees a redacted view — because the MCP tool ran on-behalf-of the user, not as the agent's identity. Nothing lands an enterprise security story harder. |
+| Model | `gpt-4.1` direct Foundry deployment |
+| Tools | **Memory**, Agent 365 MCP with `UserEntraToken` (OBO), **Web Search**, **Code Interpreter** |
+| Skills | `underwriting-appetite` and `regulatory-disclosure` principles in instructions; both Skills also exist in the isolated OBO toolbox |
+| Demo moment | Run from the Foundry portal or an end-user-authenticated client. The same call from the jump-host managed identity is rejected with `signed-in user required`, proving the OBO boundary. |
 
 ### 9.3 Shared toolbox and skills
 
 ```yaml
 # insurance-tools toolbox
-description: Shared toolbox for the insurance demo agents
-connections:
-  - name: policy-admin-mcp        # private MCP on ACA, mcp-subnet
-  - name: claims-fraud-mcp        # fronted by APIM
+description: Enterprise insurance toolbox - policy grounding, skills, web and computation
 skills:
   - name: claims-tone
   - name: regulatory-disclosure
   - name: adjudication-rationale
   - name: underwriting-appetite
+  - name: customer-comms-tone
 tools:
+  - type: azure_ai_search
+    name: aifoundrydemo3zbzsearch
+    azure_ai_search:
+      indexes:
+        - project_connection_id: aifoundrydemo3zbzsearch
+          index_name: contoso-policy-wordings
+          query_type: semantic
+          top_k: 8
+  - type: code_interpreter
+    name: insurance-calculator
   - type: web_search
-    name: external-risk
+    name: external-risk-search
 ```
 
-All four agents bind to `insurance-tools`. Demonstrate versioning:
-`azd ai toolbox skill add insurance-tools <skill>` → new immutable version → `azd ai toolbox publish insurance-tools <version>` → rollback by republishing the previous version.
+The two hosted agents bind to `insurance-tools`; the advisor uses its prompt-agent Search binding. OBO is kept in `underwriting-obo-tools` so a missing user token cannot break claims tools. Demonstrate immutable toolbox versioning by creating a new version, testing its versioned endpoint, then publishing or rolling back.
 
 ---
 
@@ -612,11 +637,11 @@ All four agents bind to `insurance-tools`. Demonstrate versioning:
 | 0–5 | Architecture walkthrough on the diagram | VNet injection, PEs, peering, APIM, zero public surface |
 | 5–8 | Show the project endpoint failing from your laptop, then connect via Bastion → `vm-jump-foundry` and load the same URL | Network isolation is real, not configured-on-paper |
 | 8–13 | `azd ai agent` scaffold → `azd provision` → `azd deploy` for a hosted agent | Developer Experience |
-| 13–20 | `policy-coverage-advisor` — grounded answer with `[Section X.Y]` citation, then the fraud-indicator escalation. Show the APIM trace for the same call. | Foundry IQ, Trust & Safety, Skills, Manage & Operate |
+| 13–20 | `policy-coverage-advisor` — washing-machine escape-of-water answer with exact clauses, GBP 500 excess and GBP 5,000 trace-and-access limit. Show its APIM trace. | Foundry IQ, Search, APIM, Trust & Safety |
 | 20–28 | FNOL → `claims-intake-triage-agent` → A2A → `coverage-settlement-adjudicator`, end to end | Agent Service, Tools, Toolboxes, A2A multi-agent |
-| 28–33 | `underwriting-risk-summarizer` run twice for the same user in **two separate conversations** — the second honours preferences stated in the first | **Memory**, Identity, personalisation |
+| 28–33 | In the portal/end-user client, run `underwriting-risk-summarizer`; contrast this with the managed-identity rejection. Reuse a seeded `userId` to show Memory. | **Memory**, OBO, Identity, Web, Code Interpreter |
 | 33–39 | App Insights trace of the multi-agent run; APIM token-limit metrics and the policy chain | Observability, Manage & Operate |
-| 39–45 | Eval suite + regression detection + Agent Optimizer proposing better instructions | Evaluations & Optimization |
+| 39–45 | If the evaluation suite has been generated and approved, show regression results and an Agent Optimizer candidate; otherwise present this as the next lifecycle step | Evaluations & Optimization |
 
 > Keep **Appendix E** open during the runbook — the caveats land far better volunteered than discovered.
 
@@ -802,6 +827,9 @@ App Insights (`appi-ailz-kj`), not the Foundry one.
 | Prompt-agent body needs `"type": "agent_reference"` | Bare `400 Bad Request`, no explanation |
 | Routing follows `@latest`, not `default_version` — `PATCH default_version` returns `200` and does nothing | Must post a **new version** to change behaviour |
 | Memory is unsupported on BYOM/APIM-routed models | `policy-coverage-advisor` can never carry memory; only `underwriting-risk-summarizer` does |
+| `UserEntraToken` OBO rejects managed identity callers | Invoke from the Foundry portal or another end-user-authenticated channel; do not use jump-host MI as the OBO validation path |
+| Toolbox Search defaults to `vector_semantic_hybrid` | Set `query_type: semantic` explicitly unless the index has an integrated vectorizer |
+| Hosted runtime identities need toolbox RBAC | Grant `Foundry User` at account/project scope and target-specific data roles such as `Search Index Data Reader` |
 
 ### Demo data
 

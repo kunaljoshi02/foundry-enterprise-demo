@@ -1,5 +1,6 @@
 # Claims Intake & Triage Orchestrator - Foundry hosted agent (multi-agent via A2A)
 import asyncio
+import json
 import os
 import uuid
 from typing import Annotated
@@ -47,6 +48,53 @@ if _APPINSIGHTS_CS:
 
 ADJUDICATOR_A2A_URL = os.environ["ADJUDICATOR_A2A_URL"]
 _credential = DefaultAzureCredential()
+TOOLBOX_ENDPOINT = os.environ["TOOLBOX_ENDPOINT"]
+_SKILLS = {
+    "claims-tone",
+    "regulatory-disclosure",
+    "adjudication-rationale",
+    "underwriting-appetite",
+    "customer-comms-tone",
+}
+
+
+async def load_insurance_skill(
+    skill_name: Annotated[
+        str,
+        Field(
+            description=(
+                "Insurance behavioral skill to load. Allowed values: claims-tone, "
+                "regulatory-disclosure, adjudication-rationale, "
+                "underwriting-appetite, customer-comms-tone."
+            )
+        ),
+    ],
+) -> str:
+    """Load the current version of an insurance skill from the Foundry toolbox."""
+    if skill_name not in _SKILLS:
+        return "Unknown skill. Allowed values: " + ", ".join(sorted(_SKILLS))
+    token = _credential.get_token("https://ai.azure.com/.default").token
+    payload = {
+        "jsonrpc": "2.0",
+        "id": str(uuid.uuid4()),
+        "method": "resources/read",
+        "params": {"uri": f"skill://{skill_name}/SKILL.md"},
+    }
+    async with httpx.AsyncClient(timeout=60.0) as http:
+        response = await http.post(
+            TOOLBOX_ENDPOINT,
+            headers={
+                "Authorization": "Bearer " + token,
+                "Content-Type": "application/json",
+            },
+            json=payload,
+        )
+    response.raise_for_status()
+    result = response.json()
+    if "error" in result:
+        return "Skill load failed: " + json.dumps(result["error"])
+    content = result.get("result", {}).get("contents", [])
+    return "\n".join(item.get("text", "") for item in content if item.get("text"))
 
 
 async def adjudicate_claim(
@@ -97,8 +145,14 @@ For every incoming claim notification (FNOL):
 2. EXTRACT entities: policy number, claimant, date of loss, date reported, location, estimated loss, injuries, third parties.
 3. DETECT red flags: late reporting, prior similar claims, inconsistent narrative, coverage lapse indicators.
 4. ROUTE: fast-track (simple, low value, clear coverage) vs complex (injury, liability dispute, large loss, suspected fraud).
-5. DELEGATE: you MUST call the adjudicate_claim tool for every claim, passing all extracted facts. Report its decision verbatim in your Adjudicator Findings section.
-6. Use the code interpreter tool for reserve, depreciation or deductible arithmetic when useful.
+5. GROUND: use the policy search tool before delegation. Select the insuring clause,
+   relevant definitions, exclusions, conditions, excesses, and limits.
+6. DELEGATE: you MUST call adjudicate_claim for every claim, passing all extracted
+   facts plus the verbatim clauses returned by policy search. Report its decision
+   verbatim in your Adjudicator Findings section.
+7. Use the code interpreter tool for reserve, depreciation or deductible arithmetic when useful.
+8. Call load_insurance_skill("claims-tone") before drafting claimant-facing text and
+   load_insurance_skill("regulatory-disclosure") before presenting a recommendation.
 
 Always answer with these sections:
 - Triage Summary
@@ -124,7 +178,7 @@ async def main():
     agent = Agent(
         client=client,
         instructions=INSTRUCTIONS,
-        tools=[toolbox, adjudicate_claim],
+        tools=[toolbox, adjudicate_claim, load_insurance_skill],
         default_options={"store": False},
     )
 

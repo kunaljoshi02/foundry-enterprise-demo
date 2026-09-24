@@ -1,0 +1,12 @@
+description: Underwriting OBO toolbox - caller identity, appetite skill and external risk
+connections:
+  - name: underwriter-obo-profile
+skills:
+  - name: underwriting-appetite
+  - name: regulatory-disclosure
+tools:
+  - type: code_interpreter
+    name: underwriting-calculator
+    container: { type: auto }
+  - type: web_search
+    name: external-risk-search
