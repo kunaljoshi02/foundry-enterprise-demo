@@ -226,13 +226,13 @@ existing public `ai-aigw-chat-kj-project` through `underwriter-memory-demo`.
 - Project: `ai-aigw-chat-kj-project`
 - Agent: `underwriter-memory-demo`
 - Store: `underwriter-memory-demo-store`
-- Scope alias: `joshikunal-joshikun-com`
-- User principal represented by the alias: `joshikunal@joshikun.com`
+- Entra user object ID scope: `b7dbc99c-2583-4c12-a839-e8447010dc79`
+- User principal: `joshikunal@joshikun.com`
 - Provision and reseed: `python scripts/provision_memory_demo.py`
 
 Pass `x-memory-user-id` on every Responses request; setting `metadata.userId` on a
 conversation does not establish Memory scope. The service rejects `@` and `.` in scope
-values, so use a stable allowed-character alias. The verified seed produces one
+values, so use the user's Entra object ID. The verified seed produces one
 consolidated `user_profile`, chat summaries, and successful recall in a new conversation.
 
 ---

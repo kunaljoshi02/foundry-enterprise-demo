@@ -25,7 +25,10 @@ USER_PRINCIPAL = os.environ.get(
     "MEMORY_DEMO_USER_PRINCIPAL",
     "joshikunal@joshikun.com",
 )
-USER_ID = os.environ.get("MEMORY_DEMO_USER_ID", "joshikunal-joshikun-com")
+USER_ID = os.environ.get(
+    "MEMORY_DEMO_USER_ID",
+    "b7dbc99c-2583-4c12-a839-e8447010dc79",
+)
 DEFINITION_PATH = (
     Path(__file__).resolve().parents[1]
     / "agents"

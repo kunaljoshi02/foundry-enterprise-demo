@@ -22,7 +22,7 @@ A **deployed and validated** reference build of Microsoft Foundry Agent Service 
 | **APIM fronting** | Existing APIM instance serves Foundry as a BYOM model connection (`ai-gateway/gpt-4.1`) with JWT validation and token limits |
 | **Multi-agent / A2A** | `claims-intake-triage-agent` orchestrates and calls `coverage-settlement-adjudicator` over A2A JSON-RPC |
 | **Tools & toolboxes** | Shared `insurance-tools` toolbox: semantic AI Search, Web Search, Code Interpreter, and five versioned Skills; typed A2A function in the hosted orchestrator |
-| **Memory** | Public project `ai-aigw-chat-kj-project`: `underwriter-memory-demo-store` attached to `underwriter-memory-demo`, scoped to `joshikunal-joshikun-com` |
+| **Memory** | Public project `ai-aigw-chat-kj-project`: `underwriter-memory-demo-store` attached to `underwriter-memory-demo`, scoped to Entra user object ID `b7dbc99c-2583-4c12-a839-e8447010dc79` |
 | **Identity / permissions** | System-assigned managed identities, per-agent instance identities, `Foundry User` for toolbox access, `Search Index Data Reader`, and `Foundry Agent Consumer` for A2A |
 | **OBO** | Isolated `underwriting-obo-tools` toolbox and `underwriter-obo-profile` `UserEntraToken` connection; requires an interactive signed-in user and intentionally fails for application identities |
 | **Observability** | App Insights + Log Analytics traces and metrics; public ingestion enabled for the demo, with AMPLS documented as the production path |

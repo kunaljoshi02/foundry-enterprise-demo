@@ -87,7 +87,7 @@ Everything below exists in the subscription today and has been smoke-tested.
 | OBO connection | `underwriter-obo-profile` | `UserEntraToken` against Agent 365 Me MCP. Provisioned; application-identity invocation is rejected by design |
 | Public Memory project | `ai-aigw-chat-kj-project` | Existing public project used because managed Memory preview does not support VNet integration |
 | Memory store | `underwriter-memory-demo-store` | Chat model `gpt-4.1-mini`, embedding `text-embedding-3-small`; user profile, chat summary, and procedural memory enabled |
-| Memory consumer | `underwriter-memory-demo` v1 via `memory_search_preview`, scope `{{$userId}}` | Verified with scope alias `joshikunal-joshikun-com`: three records stored and recalled in a new conversation |
+| Memory consumer | `underwriter-memory-demo` via `memory_search_preview`, scope `{{$userId}}` | Verified with Entra user object ID `b7dbc99c-2583-4c12-a839-e8447010dc79`: three records stored and recalled in a new conversation |
 
 > ⚠️ **Memory is not supported on VNet-integrated projects or BYOM model connections.** The private `insurance3zbz` project keeps its secure architecture and does not host the Memory demo. Native Memory runs in the separate public project.
 
@@ -610,7 +610,7 @@ Model + instructions + tools, no container. These deploy in seconds — ideal fo
 | Project | `ai-aigw-chat-kj-project` (public) |
 | Model | `gpt-4.1-mini`; embeddings via `text-embedding-3-small` |
 | Tool | `memory_search_preview` against `underwriter-memory-demo-store`, `update_delay: 1` |
-| Scope | `joshikunal-joshikun-com`, the allowed-character alias for `joshikunal@joshikun.com` |
+| Scope | Entra user object ID `b7dbc99c-2583-4c12-a839-e8447010dc79` for `joshikunal@joshikun.com` |
 | Demo moment | Show three stored preferences, open a brand-new conversation, and ask the agent to list the saved preferences |
 
 ### 9.3 Shared toolbox and skills
@@ -768,7 +768,7 @@ The live hosted-to-hosted test returned:
 - **Preview header is mandatory:** `Foundry-Features: MemoryStores=V1Preview`.
 - **Attach to an agent** with `memory_search_preview`, `scope: "{{$userId}}"`, and a short `update_delay` for demos.
 - **Per-user header:** pass `x-memory-user-id` on every Responses call. Conversation metadata named `userId` does not set the Memory scope.
-- **Scope character constraint:** only letters, numbers, `-`, and `_` are allowed. `joshikunal@joshikun.com` is mapped to `joshikunal-joshikun-com`.
+- **Scope identity:** use the signed-in user's Entra object ID. For this demo, `joshikunal@joshikun.com` resolves to `b7dbc99c-2583-4c12-a839-e8447010dc79`.
 - **Direct commands:** explicit “Remember…” requests return completed `memory_command_preview_call` items.
 - **Verified API:** `POST /memory_stores/{name}:search_memories?api-version=2025-11-15-preview`.
 - **Invocation:** the Responses API requires `agent_reference: {type: "agent_reference", name: "<agent>"}`. Both a bare `agent` property and an `agent_reference` without `type` are rejected.

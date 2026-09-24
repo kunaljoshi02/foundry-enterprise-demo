@@ -12,10 +12,11 @@ Verified on 2026-09-24 against the existing public Foundry project:
 | Chat model | `gpt-4.1-mini` |
 | Embedding model | `text-embedding-3-small` |
 | User principal | `joshikunal@joshikun.com` |
-| Memory scope alias | `joshikunal-joshikun-com` |
+| Entra user object ID scope | `b7dbc99c-2583-4c12-a839-e8447010dc79` |
 
-The scope is an alias because Foundry Memory accepts only letters, numbers,
-hyphens, and underscores in scope values.
+The scope is the tenant user's Entra object ID. Requests that use
+`x-memory-user-id` must pass this exact value to store and retrieve the same
+records.
 
 ## Seeded preferences
 
