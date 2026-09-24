@@ -1,0 +1,12 @@
+name: claims-intake-triage-agent-smoke
+agent:
+  name: claims-intake-triage-agent
+  kind: hosted
+  config: .agent_configs/baseline/metadata.yaml
+dataset:
+  name: claims-intake-triage-agent-smoke
+  version: "1.0"
+  local_uri: .foundry/datasets/claims-intake-triage-agent-smoke
+options:
+  eval_model: gpt-4.1
+max_samples: 15

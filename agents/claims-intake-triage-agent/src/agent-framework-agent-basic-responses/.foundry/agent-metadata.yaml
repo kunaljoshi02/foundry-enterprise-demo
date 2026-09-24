@@ -1,0 +1,20 @@
+schemaVersion: 1
+azd:
+  environmentName: triage-dev
+  service: agent-framework-agent-basic-responses
+defaultEnvironment: dev
+environments:
+  dev:
+    evaluationSuites:
+      - id: claims-intake-triage-agent-smoke
+        tags:
+          tier: smoke
+          purpose: baseline
+          stage: generation-pending
+        generationSource: synthetic
+        generationJobId: evaluatorgen-claims-intake-triage-agent-smoke-v1-78aa29ac
+        dataset: claims-intake-triage-agent-smoke
+        datasetVersion: "1.0"
+        datasetFile: .foundry/datasets/claims-intake-triage-agent-smoke/claims-intake-triage-agent-smoke_dg.jsonl
+        evaluatorStatus: in_progress
+        note: Evaluator generation exceeded 30 minutes. Resume with this operation ID; do not start an evaluation until the generated evaluator is cached and reviewed.

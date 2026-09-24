@@ -7,6 +7,8 @@ A **deployed and validated** reference build of Microsoft Foundry Agent Service 
 > 🔭 **Observability & field gotchas:** [`docs/observability-runbook.md`](docs/observability-runbook.md) — why App Insights stays empty, the AMPLS decision, APIM token metrics, endpoint/versioning traps.
 >
 > 🧪 **Seed the demo data:** [`scripts/seed_rerun.py`](scripts/seed_rerun.py) → transcript in [`docs/demo-seed-transcript.md`](docs/demo-seed-transcript.md).
+>
+> 📊 **Evaluation assets:** the triage agent includes a generated 15-case smoke dataset, `eval.yaml`, and resumable evaluator-generation metadata. The evaluator job exceeded the 30-minute workflow threshold; no evaluation run was started.
 
 ---
 
