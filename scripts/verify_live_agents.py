@@ -77,8 +77,8 @@ if "prompt" in targets:
         "policy-coverage-advisor",
         (
             "Policy P-7781 is a Contoso Home policy. A washing-machine hose failed "
-            "suddenly, damaging the kitchen. Repairs are GBP 8,200 and locating the "
-            "leak cost GBP 1,400. Explain coverage, exclusions, excess, trace-and-access "
+            "suddenly, damaging the kitchen. Repairs are USD 8,200 and locating the "
+            "leak cost USD 1,400. Explain coverage, exclusions, excess, trace-and-access "
             "limit, and cite the exact retrieved policy clauses."
         ),
     )
@@ -92,8 +92,8 @@ if "prompt" in targets:
         "underwriting-risk-summarizer",
         (
             "For the signed-in user, summarize this property submission and verify my "
-            "profile before making an authority-sensitive recommendation. TIV GBP "
-            "4,000,000; annual premium GBP 80,000; incurred losses over 3 years GBP "
+            "profile before making an authority-sensitive recommendation. TIV USD "
+            "4,000,000; annual premium USD 80,000; incurred losses over 3 years USD "
             "144,000. Use Code Interpreter to calculate the three-year loss ratio and "
             "Web Search for one current UK flood-risk source. Apply Memory preferences "
             "if present, identify the OBO identity/role result, and require human approval."
@@ -106,7 +106,7 @@ if "hosted" in targets or "adjudicator" in targets:
         "coverage-settlement-adjudicator",
         (
             "Contoso Home policy P-7781. Sudden washing-machine hose escape of water. "
-            "Building damage GBP 8,200; trace-and-access GBP 1,400. No gradual leakage. "
+            "Building damage USD 8,200; trace-and-access USD 1,400. No gradual leakage. "
             "Retrieve the governing clauses, load the required skills, calculate the "
             "indicative settlement, and state that human review is required."
         ),
@@ -117,7 +117,7 @@ if "hosted" in targets or "triage" in targets:
         "claims-intake-triage-agent",
         (
             "FNOL for policy L-2044. Customer slipped on a wet supermarket floor today. "
-            "No warning sign was displayed. Estimated injury reserve GBP 18,000, reported "
+            "No warning sign was displayed. Estimated injury reserve USD 18,000, reported "
             "the same day. Load the required communication skills, retrieve relevant "
             "clauses, and delegate every coverage decision to the adjudicator."
         ),

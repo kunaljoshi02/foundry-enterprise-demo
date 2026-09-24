@@ -96,12 +96,12 @@ MEMORY_RETRIES = [
     (
         "uw-marcus",
         "Marcus Hale - UW-NORTH turn 1 (preference capture, retry)",
-        "I'm underwriter Marcus Hale, desk UW-NORTH. Standing preferences: give me risk summaries in bullet form, six bullets maximum, no long prose. I decline any commercial property risk above GBP 5m TIV outright. Submission: Contoso Logistics, distribution warehouse, Leeds, GBP 3.2m TIV, fully sprinklered, 2 prior escape-of-water claims in the last 5 years.",
+        "I'm underwriter Marcus Hale, desk UW-NORTH. Standing preferences: give me risk summaries in bullet form, six bullets maximum, no long prose. I decline any commercial property risk above USD 5m TIV outright. Submission: Contoso Logistics, distribution warehouse, Leeds, USD 3.2m TIV, fully sprinklered, 2 prior escape-of-water claims in the last 5 years.",
     ),
     (
         "uw-tom",
         "Tom Byrne - UW-SME turn 1 (preference capture, retry)",
-        "Tom Byrne here, SME package desk UW-SME. How I like things: plain English, three sentences maximum, absolutely no tables and no insurance jargon - my brokers read these directly. Submission: Contoso Cafe, single site Bristol, GBP 250k combined property and liability, 1 slip-and-trip claim two years ago.",
+        "Tom Byrne here, SME package desk UW-SME. How I like things: plain English, three sentences maximum, absolutely no tables and no insurance jargon - my brokers read these directly. Submission: Contoso Cafe, single site Bristol, USD 250k combined property and liability, 1 slip-and-trip claim two years ago.",
     ),
 ]
 
@@ -109,7 +109,7 @@ ADVISOR = [
     (
         "P-7781",
         "Motor - windscreen (straightforward COVERED)",
-        "Policy CONTOSO-MOTOR-2024. Section 4.2 Glass: windscreen repair covered in full, replacement subject to GBP 75 excess, no loss of no-claims discount. A stone chip cracked my windscreen on the motorway. Is this covered and what will it cost me?",
+        "Policy CONTOSO-MOTOR-2024. Section 4.2 Glass: windscreen repair covered in full, replacement subject to USD 75 excess, no loss of no-claims discount. A stone chip cracked my windscreen on the motorway. Is this covered and what will it cost me?",
     ),
     (
         "P-4410",
@@ -129,26 +129,26 @@ ADVISOR = [
     (
         "P-5521",
         "Legal advice request -> must refuse",
-        "Policy CONTOSO-LIAB-2024. A customer is suing us for GBP 200k. Should we settle or fight it in court, and will we win?",
+        "Policy CONTOSO-LIAB-2024. A customer is suing us for USD 200k. Should we settle or fight it in court, and will we win?",
     ),
 ]
 
 CLAIMS = [
     (
         "Auto glass - fast track, low value",
-        "FNOL. Policy CONTOSO-MOTOR-2024, policyholder Sarah Whitfield. Date of loss 18 Sep 2026, reported 19 Sep 2026. Location: M1 northbound near Junction 23. Stone chip cracked the windscreen, no other damage, no injuries, no third party. Estimated GBP 420 to replace. Policy glass excess GBP 75, glass sub-limit GBP 1,000. No prior claims.",
+        "FNOL. Policy CONTOSO-MOTOR-2024, policyholder Sarah Whitfield. Date of loss 18 Sep 2026, reported 19 Sep 2026. Location: M1 northbound near Junction 23. Stone chip cracked the windscreen, no other damage, no injuries, no third party. Estimated USD 420 to replace. Policy glass excess USD 75, glass sub-limit USD 1,000. No prior claims.",
     ),
     (
         "Escape of water - commercial, mid value, prior claims",
-        "FNOL. Policy CONTOSO-PROP-2023, insured Contoso Logistics Ltd, distribution warehouse in Leeds. Date of loss 12 Sep 2026, reported 15 Sep 2026. A sprinkler pipe joint failed overnight and flooded the pick-and-pack area. Damage to racking and approximately 1,200 cartons of stock. Estimated loss GBP 180,000. Property excess GBP 10,000, escape-of-water sub-limit GBP 250,000. Two prior escape-of-water claims in the last five years, GBP 22k and GBP 41k. Business interruption also notified but not quantified.",
+        "FNOL. Policy CONTOSO-PROP-2023, insured Contoso Logistics Ltd, distribution warehouse in Leeds. Date of loss 12 Sep 2026, reported 15 Sep 2026. A sprinkler pipe joint failed overnight and flooded the pick-and-pack area. Damage to racking and approximately 1,200 cartons of stock. Estimated loss USD 180,000. Property excess USD 10,000, escape-of-water sub-limit USD 250,000. Two prior escape-of-water claims in the last five years, USD 22k and USD 41k. Business interruption also notified but not quantified.",
     ),
     (
         "Late-reported theft with fraud red flags",
-        "FNOL. Policy CONTOSO-HOME-2024, policyholder Daniel Okoye. Date of loss stated as 2 Jun 2026, reported 16 Sep 2026 - a 106 day delay. Alleged burglary at the insured address, claiming GBP 14,500 of electronics and jewellery. No forced entry recorded. Police reference provided is for a different address. Two prior theft claims on the same policy in the past 18 months. Receipts supplied are photocopies reissued after the loss date. Policy requires notification within 30 days. Theft excess GBP 500.",
+        "FNOL. Policy CONTOSO-HOME-2024, policyholder Daniel Okoye. Date of loss stated as 2 Jun 2026, reported 16 Sep 2026 - a 106 day delay. Alleged burglary at the insured address, claiming USD 14,500 of electronics and jewellery. No forced entry recorded. Police reference provided is for a different address. Two prior theft claims on the same policy in the past 18 months. Receipts supplied are photocopies reissued after the loss date. Policy requires notification within 30 days. Theft excess USD 500.",
     ),
     (
         "Bodily injury liability - large, complex",
-        "FNOL. Policy CONTOSO-LIAB-2024, insured Fourth Coffee Ltd, Bath premises. Date of loss 8 Sep 2026, reported 9 Sep 2026. A customer slipped on a wet floor near the counter; no warning sign was displayed. Ambulance attended; fractured hip, surgery required, ongoing rehabilitation. Claimant has instructed solicitors. Reserve estimate GBP 275,000 including care costs. Public liability limit GBP 5m, excess GBP 2,500. One prior slip-and-trip claim at the same site two years ago, settled GBP 8,000. CCTV footage exists but the previous 30 days were overwritten.",
+        "FNOL. Policy CONTOSO-LIAB-2024, insured Fourth Coffee Ltd, Bath premises. Date of loss 8 Sep 2026, reported 9 Sep 2026. A customer slipped on a wet floor near the counter; no warning sign was displayed. Ambulance attended; fractured hip, surgery required, ongoing rehabilitation. Claimant has instructed solicitors. Reserve estimate USD 275,000 including care costs. Public liability limit USD 5m, excess USD 2,500. One prior slip-and-trip claim at the same site two years ago, settled USD 8,000. CCTV footage exists but the previous 30 days were overwritten.",
     ),
 ]
 
@@ -156,17 +156,17 @@ MEMORY_RECALL = [
     (
         "uw-marcus",
         "Marcus Hale - cross-conversation memory recall",
-        "New submission just landed: Litware Distribution, warehouse in Doncaster, GBP 4.6m TIV, sprinklered, one prior fire claim. Handle it my usual way.",
+        "New submission just landed: Litware Distribution, warehouse in Doncaster, USD 4.6m TIV, sprinklered, one prior fire claim. Handle it my usual way.",
     ),
     (
         "uw-priya",
         "Priya Raman - cross-conversation memory recall",
-        "Fresh submission: Relecloud Managed Services, GBP 7m cyber limit requested, MFA everywhere, EDR fleet-wide, quarterly pen tests. My usual format please.",
+        "Fresh submission: Relecloud Managed Services, USD 7m cyber limit requested, MFA everywhere, EDR fleet-wide, quarterly pen tests. My usual format please.",
     ),
     (
         "uw-tom",
         "Tom Byrne - cross-conversation memory recall",
-        "New one: Proseware Newsagent, single site Cardiff, GBP 180k combined, no prior claims. You know how I like it.",
+        "New one: Proseware Newsagent, single site Cardiff, USD 180k combined, no prior claims. You know how I like it.",
     ),
 ]
 

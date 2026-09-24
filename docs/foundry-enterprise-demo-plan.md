@@ -571,7 +571,7 @@ Two containerised hosted agents, deployed to the private ACR and run in the agen
 | Tools | `insurance-tools`: **Azure AI Search**, **Code Interpreter**, **Web Search**; `load_insurance_skill` |
 | Skills | `adjudication-rationale`, `regulatory-disclosure`, `customer-comms-tone` |
 | Guardrails | Groundedness enforcement — no coverage claim without a cited clause |
-| Demo moment | Returns "Covered — £4,200, less £250 excess", citing **Section 3(b) Accidental Damage**, with the fraud check shown as clean |
+| Demo moment | Returns "Covered — $4,200, less $250 excess", citing **Section 3(b) Accidental Damage**, with the fraud check shown as clean |
 
 **Why this is a genuine multi-agent solution:** separation of duties mirrors the real org (intake vs adjudication), each agent has a distinct tool surface and least-privilege identity, they are versioned and evaluated independently, and the A2A hop is a real network hop you can show in the trace.
 
@@ -637,7 +637,7 @@ The two hosted agents bind to `insurance-tools`; the advisor uses its prompt-age
 | 0–5 | Architecture walkthrough on the diagram | VNet injection, PEs, peering, APIM, zero public surface |
 | 5–8 | Show the project endpoint failing from your laptop, then connect via Bastion → `vm-jump-foundry` and load the same URL | Network isolation is real, not configured-on-paper |
 | 8–13 | `azd ai agent` scaffold → `azd provision` → `azd deploy` for a hosted agent | Developer Experience |
-| 13–20 | `policy-coverage-advisor` — washing-machine escape-of-water answer with exact clauses, GBP 500 excess and GBP 5,000 trace-and-access limit. Show its APIM trace. | Foundry IQ, Search, APIM, Trust & Safety |
+| 13–20 | `policy-coverage-advisor` — washing-machine escape-of-water answer with exact clauses, USD 500 excess and USD 5,000 trace-and-access limit. Show its APIM trace. | Foundry IQ, Search, APIM, Trust & Safety |
 | 20–28 | FNOL → `claims-intake-triage-agent` → A2A → `coverage-settlement-adjudicator`, end to end | Agent Service, Tools, Toolboxes, A2A multi-agent |
 | 28–33 | In the portal/end-user client, run `underwriting-risk-summarizer`; contrast this with the managed-identity rejection. Reuse a seeded `userId` to show Memory. | **Memory**, OBO, Identity, Web, Code Interpreter |
 | 33–39 | App Insights trace of the multi-agent run; APIM token-limit metrics and the policy chain | Observability, Manage & Operate |
