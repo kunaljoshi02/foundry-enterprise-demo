@@ -12,11 +12,11 @@ Verified on 2026-09-24 against the existing public Foundry project:
 | Chat model | `gpt-4.1-mini` |
 | Embedding model | `text-embedding-3-small` |
 | User principal | `joshikunal@joshikun.com` |
-| Entra user object ID scope | `b7dbc99c-2583-4c12-a839-e8447010dc79` |
+| Portal-resolved Entra scope (`OID_TID`) | `b7dbc99c-2583-4c12-a839-e8447010dc79_48640a7a-0e09-4f2d-87c1-d483b3c9519d` |
 
-The scope is the tenant user's Entra object ID. Requests that use
-`x-memory-user-id` must pass this exact value to store and retrieve the same
-records.
+When the portal omits `x-memory-user-id`, Foundry derives the scope from the
+signed-in token as `OID_TID`. Backend requests that set `x-memory-user-id` must
+pass this exact composite value to share the portal's records.
 
 ## Seeded preferences
 
@@ -27,7 +27,7 @@ Three explicit `Remember...` prompts completed through
 2. Put loss ratio first and total insured value second.
 3. Use USD and require explicit human review for adverse recommendations.
 
-The store returned three records, including a consolidated `user_profile`:
+The store returned a consolidated `user_profile` plus supporting chat summaries:
 
 > User prefers underwriting summaries formatted in no more than five concise
 > bullet points, with loss ratio first and total insured value second. User uses

@@ -226,13 +226,14 @@ existing public `ai-aigw-chat-kj-project` through `underwriter-memory-demo`.
 - Project: `ai-aigw-chat-kj-project`
 - Agent: `underwriter-memory-demo`
 - Store: `underwriter-memory-demo-store`
-- Entra user object ID scope: `b7dbc99c-2583-4c12-a839-e8447010dc79`
+- Portal-resolved Entra scope (`OID_TID`): `b7dbc99c-2583-4c12-a839-e8447010dc79_48640a7a-0e09-4f2d-87c1-d483b3c9519d`
 - User principal: `joshikunal@joshikun.com`
 - Provision and reseed: `python scripts/provision_memory_demo.py`
 
 Pass `x-memory-user-id` on every Responses request; setting `metadata.userId` on a
 conversation does not establish Memory scope. The service rejects `@` and `.` in scope
-values, so use the user's Entra object ID. The verified seed produces one
+values. To match portal calls that omit the header, use the resolved `OID_TID`
+value shown in the response tool definition. The verified seed produces one
 consolidated `user_profile`, chat summaries, and successful recall in a new conversation.
 
 ---

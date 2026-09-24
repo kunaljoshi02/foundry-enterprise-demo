@@ -27,7 +27,7 @@ USER_PRINCIPAL = os.environ.get(
 )
 USER_ID = os.environ.get(
     "MEMORY_DEMO_USER_ID",
-    "b7dbc99c-2583-4c12-a839-e8447010dc79",
+    "b7dbc99c-2583-4c12-a839-e8447010dc79_48640a7a-0e09-4f2d-87c1-d483b3c9519d",
 )
 DEFINITION_PATH = (
     Path(__file__).resolve().parents[1]
