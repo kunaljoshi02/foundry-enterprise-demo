@@ -16,13 +16,15 @@ HEADERS = {"Foundry-Features": "MemoryStores=V1Preview"}
 _credential = DefaultAzureCredential()
 
 
-def post(url, body, timeout=900):
+def post(url, body, timeout=900, extra_headers=None):
     headers = {
         **HEADERS,
         "Authorization": "Bearer "
         + _credential.get_token("https://ai.azure.com/.default").token,
         "Content-Type": "application/json",
     }
+    if extra_headers:
+        headers.update(extra_headers)
     return requests.post(url, headers=headers, json=body, timeout=timeout)
 
 
@@ -50,7 +52,7 @@ def report(label, response, started):
     print(output_text(payload)[:6000])
 
 
-def prompt_agent(name, prompt, conversation=None):
+def prompt_agent(name, prompt, conversation=None, user_id=None):
     body = {
         "agent_reference": {"type": "agent_reference", "name": name},
         "input": prompt,
@@ -58,7 +60,16 @@ def prompt_agent(name, prompt, conversation=None):
     if conversation:
         body["conversation"] = conversation
     started = time.time()
-    report(name, post(PROJECT + "/openai/v1/responses", body), started)
+    extra_headers = {"x-memory-user-id": user_id} if user_id else None
+    report(
+        name,
+        post(
+            PROJECT + "/openai/v1/responses",
+            body,
+            extra_headers=extra_headers,
+        ),
+        started,
+    )
 
 
 def hosted_agent(name, prompt):
@@ -95,8 +106,8 @@ if "prompt" in targets:
             "profile before making an authority-sensitive recommendation. TIV USD "
             "4,000,000; annual premium USD 80,000; incurred losses over 3 years USD "
             "144,000. Use Code Interpreter to calculate the three-year loss ratio and "
-            "Web Search for one current UK flood-risk source. Apply Memory preferences "
-            "if present, identify the OBO identity/role result, and require human approval."
+            "Web Search for one current UK flood-risk source. Identify the OBO "
+            "identity/role result and require human approval."
         ),
         conversation_response.json()["id"],
     )

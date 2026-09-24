@@ -43,7 +43,7 @@ invoke_agent <id>                                  (triage, InProc)
 
 Prompt-agent spans appear under `cloud_RoleName=responsesapi`:
 
-- `invoke_agent underwriting-risk-summarizer:2` + `execute_tool remote_functions.memory_command` — the Memory tool firing
+- `invoke_agent underwriter-memory-demo:1` + `memory_command_preview_call` — the public-project Memory command firing
 - `invoke_agent policy-coverage-advisor:3` + `chat ai-gateway/gpt-4.1` — the APIM/BYOM path
 
 That single screenshot proves toolbox, A2A multi-agent, memory, and the APIM gateway
@@ -207,7 +207,7 @@ definition so `@latest` resolved to a BYOM-compatible version.
 
 ---
 
-## 9. Gotcha: Memory is unsupported on BYOM connections
+## 9. Gotcha: Memory is unsupported on BYOM and VNet-integrated projects
 
 Attaching `memory_search_preview` to an agent whose model routes through APIM fails:
 
@@ -215,28 +215,25 @@ Attaching `memory_search_preview` to an agent whose model routes through APIM fa
 The following tools are not supported with BYO model: memory_search
 ```
 
-Consequence for this demo: `policy-coverage-advisor` (routes via `ai-gateway/gpt-4.1`)
-**cannot** carry memory. Memory lives only on `underwriting-risk-summarizer`, which uses
-the direct `gpt-4.1` deployment. Plan the narrative accordingly — do not promise memory
-on the gateway-routed agent.
+Consequence for this demo: neither the APIM/BYOM advisor nor the private
+`underwriting-risk-summarizer` carries managed Memory. Native Memory runs in the
+existing public `ai-aigw-chat-kj-project` through `underwriter-memory-demo`.
 
 ---
 
-## 10. Gotcha: memory store REST surface is largely undocumented
+## 10. Managed Memory demo contract
 
-Working today:
+- Project: `ai-aigw-chat-kj-project`
+- Agent: `underwriter-memory-demo`
+- Store: `underwriter-memory-demo-store`
+- Scope alias: `joshikunal-joshikun-com`
+- User principal represented by the alias: `joshikunal@joshikun.com`
+- Provision and reseed: `python scripts/provision_memory_demo.py`
 
-- `GET {EP}/memory_stores?api-version=v1` — list
-- `GET {EP}/memory_stores/insurance-memory?api-version=v1` — get **by name** (the id 404s)
-- `POST {EP}/memory_stores/{name}/items?api-version=v1` — create
-
-Every search/enumerate variant tried returned 404 or `memory_id is invalid`
-(`/items/search`, `/items/query`, `/items/list`, `/memories/*`, `/search`, colon-verbs).
-
-**Demo approach:** prove memory through the **portal Memory view** plus **behavioural
-cross-conversation recall** (ask a follow-up in a new conversation and show the persona
-preference applied). Observed input-token growth — ~465 vs ~250 baseline — is good
-supporting evidence that memory is being injected into the prompt.
+Pass `x-memory-user-id` on every Responses request; setting `metadata.userId` on a
+conversation does not establish Memory scope. The service rejects `@` and `.` in scope
+values, so use a stable allowed-character alias. The verified seed produces one
+consolidated `user_profile`, chat summaries, and successful recall in a new conversation.
 
 ---
 

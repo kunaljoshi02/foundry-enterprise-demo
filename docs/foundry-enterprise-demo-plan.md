@@ -46,7 +46,7 @@ Everything below exists in the subscription today and has been smoke-tested.
 | Capability hosts | `aifoundrydemo3zbz@aml_aiagentservice` (account), `caphostproj` (project) | Standard Agent Setup |
 | BYO dependencies | `aifoundrydemo3zbzcosmosdb`, `aifoundrydemo3zbzsearch`, `aifoundrydemo3zbzstorage`, `acr3zbz` | All behind private endpoints |
 | Observability | `law-tracing-3zbz`, `appi-tracing-3zbz`, `ampls-tracing-3zbz` | Azure Monitor Private Link Scope |
-| Models | `gpt-4.1` (2025-04-14, GlobalStandard, 50K), `text-embedding-3-small` (v1, GlobalStandard, 50K) | Embedding model backs Memory |
+| Models | `gpt-4.1` (2025-04-14, GlobalStandard, 50K), `text-embedding-3-small` (v1, GlobalStandard, 50K) | Private project models |
 | Jump host | `vm-jump-foundry` (WS2022, D4s_v5, **no public IP**), system MI `71f67867-7dcf-4bfb-b81b-99264a1b9561` | Reached via `bastion-foundry` (Standard) + `pip-bastion-foundry` |
 | Deployment SP | `sp-foundry-demo-deploy` — appId `a83d036a-1fda-468a-b1a3-4bc6e5fd164f` | Required for `azd` auth (see Appendix D) |
 
@@ -68,7 +68,8 @@ Everything below exists in the subscription today and has been smoke-tested.
 | 1 | `claims-intake-triage-agent` | Hosted (Agent Framework, Python) | `gpt-4.1` | **Orchestrator.** Search + Skills + Code Interpreter + hosted-agent delegation with explicit A2A error handling. | v9 ✅ |
 | 2 | `coverage-settlement-adjudicator` | Hosted (Agent Framework, Python) | `gpt-4.1` | **Specialist.** Search + Skills + Code Interpreter; exposes `responses` and `a2a`. | v6 ✅ |
 | 3 | `policy-coverage-advisor` | Prompt | `ai-gateway/gpt-4.1` (**via APIM**) | Semantic Search-grounded coverage Q&A with clause citation. | v10 ✅ |
-| 4 | `underwriting-risk-summarizer` | Prompt | `gpt-4.1` (direct) | Memory + OBO MCP + Web Search + Code Interpreter. OBO needs an interactive user. | v3 ⚠️ |
+| 4 | `underwriting-risk-summarizer` | Prompt | `gpt-4.1` (direct) | Private-project OBO MCP + Web Search + Code Interpreter. OBO needs an interactive user. | v5 ⚠️ |
+| 5 | `underwriter-memory-demo` | Prompt (public project) | `gpt-4.1-mini` | Native managed Memory preference capture and cross-conversation recall. | v1 ✅ |
 
 **Multi-agent flow (proven end-to-end):** FNOL → `claims-intake-triage-agent` → `adjudicate_claim` function tool → A2A capability probe → hosted Responses fallback when Foundry returns `HostedAgentNotSupported` → `coverage-settlement-adjudicator` → adjudication surfaced in the triage response.
 
@@ -84,10 +85,11 @@ Everything below exists in the subscription today and has been smoke-tested.
 | Skills | `claims-tone`, `regulatory-disclosure`, `adjudication-rationale`, `underwriting-appetite`, `customer-comms-tone` | Real v1/default Foundry Skills exposed as `skill://.../SKILL.md` resources |
 | Agent delegation | typed `adjudicate_claim` hosted-agent function | Checks the JSON-RPC envelope, then uses the hosted Responses endpoint because the current service supports prompt agents—not hosted agents—as native A2A targets |
 | OBO connection | `underwriter-obo-profile` | `UserEntraToken` against Agent 365 Me MCP. Provisioned; application-identity invocation is rejected by design |
-| Memory store | `insurance-memory` | Chat model `gpt-4.1`, embedding `text-embedding-3-small`, `chat_summary_enabled` + `user_profile_enabled` |
-| Memory consumer | `underwriting-risk-summarizer` v2 via `memory_search_preview`, scope `{{$userId}}` | Verified: preferences stated in conversation 1 were honoured in a **brand-new conversation** for the same user |
+| Public Memory project | `ai-aigw-chat-kj-project` | Existing public project used because managed Memory preview does not support VNet integration |
+| Memory store | `underwriter-memory-demo-store` | Chat model `gpt-4.1-mini`, embedding `text-embedding-3-small`; user profile, chat summary, and procedural memory enabled |
+| Memory consumer | `underwriter-memory-demo` v1 via `memory_search_preview`, scope `{{$userId}}` | Verified with scope alias `joshikunal-joshikun-com`: three records stored and recalled in a new conversation |
 
-> ⚠️ **Memory is not supported on BYOM model connections.** Attaching `memory_search_preview` to `policy-coverage-advisor` (which routes via APIM) returns `The following tools are not supported with BYO model: memory_search`. Memory was therefore attached to the direct-model agent instead. Demo both facts — it is a real architectural trade-off between "everything through the gateway" and "full platform feature set".
+> ⚠️ **Memory is not supported on VNet-integrated projects or BYOM model connections.** The private `insurance3zbz` project keeps its secure architecture and does not host the Memory demo. Native Memory runs in the separate public project.
 
 ### 1A.5 Verified capability boundary
 
@@ -99,7 +101,7 @@ Everything below exists in the subscription today and has been smoke-tested.
 | Toolbox | ✅ Verified | Live `tools/list`: Search, Web Search, Code Interpreter; live `resources/list`: five Skills |
 | Skills | ✅ Verified | Hosted traces include `load_insurance_skill`; returned current `SKILL.md` text |
 | Hosted A2A | ✅ Verified | Triage v8 → adjudicator v6 using blocking `message/send` |
-| Memory | ✅ Verified | Cross-conversation preference recall for the same `userId` |
+| Memory | ✅ Verified (public project) | Three scoped preferences stored and recalled across conversations by `underwriter-memory-demo` |
 | OBO | ⚠️ User-context gated | Connection/toolbox/agent wiring exists. Managed-identity test returns `signed-in user required`; use the Foundry portal or an end-user-authenticated client |
 | Evaluations / Agent Optimizer | ⏳ Not run | Requires an explicit choice of suite source and approval before generating/running evaluation assets |
 | Fabric IQ, private custom MCP, File Search, Guardrails API, routines | ◻ Golden-path extensions | Documented architecture options, not deployed in this demo |
@@ -596,9 +598,20 @@ Model + instructions + tools, no container. These deploy in seconds — ideal fo
 | --- | --- |
 | Purpose | UC-4 — summarise a submission and recommend appetite |
 | Model | `gpt-4.1` direct Foundry deployment |
-| Tools | **Memory**, Agent 365 MCP with `UserEntraToken` (OBO), **Web Search**, **Code Interpreter** |
+| Tools | Agent 365 MCP with `UserEntraToken` (OBO), **Web Search**, **Code Interpreter** |
 | Skills | `underwriting-appetite` and `regulatory-disclosure` principles in instructions; both Skills also exist in the isolated OBO toolbox |
 | Demo moment | Run from the Foundry portal or an end-user-authenticated client. The same call from the jump-host managed identity is rejected with `signed-in user required`, proving the OBO boundary. |
+
+#### Agent 5 — `underwriter-memory-demo` (prompt, public project) — **the Memory showcase**
+
+| Aspect | Detail |
+| --- | --- |
+| Purpose | Demonstrate native managed Memory without weakening the private claims project |
+| Project | `ai-aigw-chat-kj-project` (public) |
+| Model | `gpt-4.1-mini`; embeddings via `text-embedding-3-small` |
+| Tool | `memory_search_preview` against `underwriter-memory-demo-store`, `update_delay: 1` |
+| Scope | `joshikunal-joshikun-com`, the allowed-character alias for `joshikunal@joshikun.com` |
+| Demo moment | Show three stored preferences, open a brand-new conversation, and ask the agent to list the saved preferences |
 
 ### 9.3 Shared toolbox and skills
 
@@ -639,7 +652,8 @@ The two hosted agents bind to `insurance-tools`; the advisor uses its prompt-age
 | 8–13 | `azd ai agent` scaffold → `azd provision` → `azd deploy` for a hosted agent | Developer Experience |
 | 13–20 | `policy-coverage-advisor` — washing-machine escape-of-water answer with exact clauses, USD 500 excess and USD 5,000 trace-and-access limit. Show its APIM trace. | Foundry IQ, Search, APIM, Trust & Safety |
 | 20–28 | FNOL → `claims-intake-triage-agent` → A2A → `coverage-settlement-adjudicator`, end to end | Agent Service, Tools, Toolboxes, A2A multi-agent |
-| 28–33 | In the portal/end-user client, run `underwriting-risk-summarizer`; contrast this with the managed-identity rejection. Reuse a seeded `userId` to show Memory. | **Memory**, OBO, Identity, Web, Code Interpreter |
+| 28–31 | Switch to public `ai-aigw-chat-kj-project`; open `underwriter-memory-demo` and ask for saved preferences in a new conversation. | **Managed Memory**, user scope, cross-conversation recall |
+| 31–34 | Return to private `insurance3zbz`; run `underwriting-risk-summarizer` from an end-user-authenticated client and contrast it with managed-identity rejection. | OBO, Identity, Web, Code Interpreter |
 | 33–39 | App Insights trace of the multi-agent run; APIM token-limit metrics and the policy chain | Observability, Manage & Operate |
 | 39–45 | If the evaluation suite has been generated and approved, show regression results and an Agent Optimizer candidate; otherwise present this as the next lifecycle step | Evaluations & Optimization |
 
@@ -698,7 +712,7 @@ Helper: `infrastructure/infrastructure-setup-bicep/deployment-tools/cleanup/`
 Original open items, now resolved or decided:
 
 1. ~~Confirm target model~~ → **`gpt-4.1`** deployed and proven with BYOM.
-2. ~~Confirm embedding model~~ → **`text-embedding-3-small`** deployed; backs `insurance-memory`.
+2. ~~Confirm embedding model~~ → **`text-embedding-3-small`** deployed in the public project; backs `underwriter-memory-demo-store`.
 3. ~~Option 4a vs 4b~~ → **4a** (reuse existing `pe-apim-ailz-kj` + DNS link).
 4. **Open:** set APIM `publicNetworkAccess = Disabled`. Currently `Enabled` — it is the deliberate external ingress point. Decide before a security-sensitive audience.
 5. **Open:** add `<client-application-ids>` to the APIM JWT `validate-jwt` policy to pin which app registrations may call the gateway.
@@ -749,13 +763,16 @@ The live hosted-to-hosted test returned:
 
 ## Appendix C — Agent Memory
 
-- **REST only.** `azure-ai-projects` 2.7.0 ships the memory *models* but exposes no client surface (`AIProjectClient` has only `close` / `get_openai_client` / `send_request`).
-- **Path is snake_case:** `POST {project_endpoint}/memory_stores?api-version=v1`. `/memoryStores` returns 404.
+- **Architecture constraint:** managed Memory preview does not support VNet integration. The native Memory demo therefore runs in the existing public project, not `insurance3zbz`.
+- **Path is snake_case:** `POST {project_endpoint}/memory_stores?api-version=2025-11-15-preview`.
 - **Preview header is mandatory:** `Foundry-Features: MemoryStores=V1Preview`.
-- **Body:** `{name, description, definition: {kind: "default", chat_model, embedding_model, options: {chat_summary_enabled, user_profile_enabled, user_profile_details}}}`.
-- **Attach to an agent** by adding a tool `{"type": "memory_search_preview", "memory_store_name": "insurance-memory", "scope": "{{$userId}}"}` to a new agent *version*, then PATCH the agent's `default_version`.
+- **Attach to an agent** with `memory_search_preview`, `scope: "{{$userId}}"`, and a short `update_delay` for demos.
+- **Per-user header:** pass `x-memory-user-id` on every Responses call. Conversation metadata named `userId` does not set the Memory scope.
+- **Scope character constraint:** only letters, numbers, `-`, and `_` are allowed. `joshikunal@joshikun.com` is mapped to `joshikunal-joshikun-com`.
+- **Direct commands:** explicit “Remember…” requests return completed `memory_command_preview_call` items.
+- **Verified API:** `POST /memory_stores/{name}:search_memories?api-version=2025-11-15-preview`.
 - **Invocation:** the Responses API requires `agent_reference: {type: "agent_reference", name: "<agent>"}`. Both a bare `agent` property and an `agent_reference` without `type` are rejected.
-- **Not compatible with BYOM** — see the warning in §1A.4.
+- **Not compatible with BYOM or VNet integration** — see §1A.4.
 - **`/openai/v1/...` paths reject `api-version`**; the project-scoped control paths require it. Don't mix them.
 
 ## Appendix D — Jump host, `azd` and remote execution
@@ -788,7 +805,7 @@ FOUNDRY_PROJECT_ENDPOINT       AZURE_OPENAI_ENDPOINT
 
 ## Appendix E — Honest caveats to state in the demo
 
-1. **Only the APIM path is end-to-end private.** Direct model connections originate from the *managed* Agent Service inference plane, not from the delegated `agent-subnet`. If the customer's requirement is "no traffic leaves my VNet for inference", the APIM/BYOM path is the answer — and it costs you Memory (Appendix C).
+1. **Managed Memory is demonstrated in a separate public project.** The private claims project remains VNet-injected and `publicNetworkAccess=Disabled`; native Memory preview cannot currently run there.
 2. **APIM itself is currently publicly reachable.** That is the deliberate ingress point; call it out rather than letting the customer find it.
 3. **Memory, `memory_search_preview` and the A2A toolbox tool are previews.** The `a2a_preview` async-polling gap (Appendix B) is a live example — show the `blocking: true` workaround as the production pattern.
 4. **Shared private DNS zones now serve three VNets.** Links are additive with no record collisions, but the platform team should be told.
@@ -838,7 +855,7 @@ App Insights (`appi-ailz-kj`), not the Foundry one.
 | Prompt agents use `/openai/v1/responses` and **reject** `api-version`; hosted agents use `/agents/{name}/endpoint/protocols/openai/responses` and **require** `?api-version=v1` | Wrong endpoint → `400` with unhelpful text |
 | Prompt-agent body needs `"type": "agent_reference"` | Bare `400 Bad Request`, no explanation |
 | Routing follows `@latest`, not `default_version` — `PATCH default_version` returns `200` and does nothing | Must post a **new version** to change behaviour |
-| Memory is unsupported on BYOM/APIM-routed models | `policy-coverage-advisor` can never carry memory; only `underwriting-risk-summarizer` does |
+| Memory is unsupported on BYOM/APIM-routed models and VNet-integrated projects | Keep Memory off the private agents; demonstrate it with `underwriter-memory-demo` in the public project |
 | `UserEntraToken` OBO rejects managed identity callers | Invoke from the Foundry portal or another end-user-authenticated channel; do not use jump-host MI as the OBO validation path |
 | Toolbox Search defaults to `vector_semantic_hybrid` | Set `query_type: semantic` explicitly unless the index has an integrated vectorizer |
 | Hosted runtime identities need toolbox RBAC | Grant `Foundry User` at account/project scope and target-specific data roles such as `Search Index Data Reader` |

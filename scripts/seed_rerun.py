@@ -17,6 +17,10 @@ from azure.identity import DefaultAzureCredential
 
 ACCOUNT = "https://aifoundrydemo3zbz.services.ai.azure.com"
 EP = ACCOUNT + "/api/projects/insurance3zbz"
+MEMORY_EP = (
+    "https://ai-aigw-chat-kj.services.ai.azure.com/api/projects/"
+    "ai-aigw-chat-kj-project"
+)
 OUT = r"C:\demo_seed_output_rerun.md"
 
 _cred = DefaultAzureCredential()
@@ -57,13 +61,16 @@ def text_of(payload):
     )
 
 
-def conversation(user_id):
-    r = post(EP + "/openai/v1/conversations", {"metadata": {"userId": user_id}})
+def conversation(user_id, endpoint=EP):
+    r = post(
+        endpoint + "/openai/v1/conversations",
+        {"metadata": {"userId": user_id}},
+    )
     r.raise_for_status()
     return r.json()["id"]
 
 
-def ask_prompt_agent(name, prompt, conv=None):
+def ask_prompt_agent(name, prompt, conv=None, user_id=None, endpoint=EP):
     body = {
         "agent_reference": {"type": "agent_reference", "name": name},
         "input": prompt,
@@ -71,7 +78,15 @@ def ask_prompt_agent(name, prompt, conv=None):
     if conv:
         body["conversation"] = conv
     t0 = time.time()
-    r = post(EP + "/openai/v1/responses", body)
+    request_headers = headers()
+    if user_id:
+        request_headers["x-memory-user-id"] = user_id
+    r = requests.post(
+        endpoint + "/openai/v1/responses",
+        headers=request_headers,
+        json=body,
+        timeout=900,
+    )
     el = time.time() - t0
     if r.status_code >= 300:
         return False, el, "HTTP %s: %s" % (r.status_code, r.text[:500]), {}
@@ -195,8 +210,14 @@ def main():
         f.write("\n\n---\n\n## 1. Agent Memory - preference capture retries\n")
         for user, label, prompt in MEMORY_RETRIES:
             try:
-                conv = conversation(user)
-                res = ask_prompt_agent("underwriting-risk-summarizer", prompt, conv)
+                conv = conversation(user, endpoint=MEMORY_EP)
+                res = ask_prompt_agent(
+                    "underwriter-memory-demo",
+                    prompt,
+                    conv,
+                    user_id=user,
+                    endpoint=MEMORY_EP,
+                )
             except Exception as exc:  # noqa: BLE001
                 res = (False, 0.0, str(exc), {})
             record(f, label, *res, prompt=prompt)
@@ -223,8 +244,14 @@ def main():
         f.write("\n\n---\n\n## 4. Agent Memory - cross-conversation recall proof\n")
         for user, label, prompt in MEMORY_RECALL:
             try:
-                conv = conversation(user)
-                res = ask_prompt_agent("underwriting-risk-summarizer", prompt, conv)
+                conv = conversation(user, endpoint=MEMORY_EP)
+                res = ask_prompt_agent(
+                    "underwriter-memory-demo",
+                    prompt,
+                    conv,
+                    user_id=user,
+                    endpoint=MEMORY_EP,
+                )
             except Exception as exc:  # noqa: BLE001
                 res = (False, 0.0, str(exc), {})
             record(f, label, *res, prompt=prompt)
